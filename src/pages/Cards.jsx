@@ -1,33 +1,16 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import NfcCardRow from "../components/NfcCardRow";
 
 function Cards() {
-  const cards = [
-    {
-      id: 1,
-      name: "Webonix Google Yorum",
-      type: "Google Yorum",
-      code: "A8K2XP",
-      scans: 1284,
-      active: true,
-    },
-    {
-      id: 2,
-      name: "Webonix Instagram",
-      type: "Instagram",
-      code: "B7X92M",
-      scans: 542,
-      active: true,
-    },
-    {
-      id: 3,
-      name: "Webonix WhatsApp",
-      type: "WhatsApp",
-      code: "C2P81N",
-      scans: 92,
-      active: false,
-    },
-  ];
+  const [cards, setCards] = useState([]);
+
+  useEffect(() => {
+    const savedCards =
+      JSON.parse(localStorage.getItem("nfcCards")) || [];
+
+    setCards(savedCards);
+  }, []);
 
   return (
     <>
@@ -57,7 +40,10 @@ function Cards() {
 
           <tbody>
             {cards.map((card) => (
-              <NfcCardRow key={card.id} card={card} />
+              <NfcCardRow
+                key={card.id}
+                card={card}
+              />
             ))}
           </tbody>
         </table>
