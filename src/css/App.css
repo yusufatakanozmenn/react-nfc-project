@@ -324,3 +324,46 @@
   border-radius: 7px;
   overflow-x: auto;
 }
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.status-button {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #e0e7ff;
+  color: #3730a3;
+}
+
+.status-button:hover {
+  background-color: #c7d2fe;
+}
+
+.delete-button {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.delete-button:hover {
+  background-color: #fecaca;
+}
+.edit-button {
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #374151;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.edit-button:hover {
+  background-color: #f3f4f6;
+}

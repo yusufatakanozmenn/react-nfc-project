@@ -6,12 +6,30 @@ function Cards() {
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
-    const savedCards =
-      JSON.parse(localStorage.getItem("nfcCards")) || [];
+    const savedCards = JSON.parse(localStorage.getItem("nfcCards")) || [];
 
     setCards(savedCards);
   }, []);
 
+  const saveCards = (updatedCards) => {
+    setCards(updatedCards);
+
+    localStorage.setItem("nfcCards", JSON.stringify(updatedCards));
+  };
+
+  const handleDelete = (id) => {
+    const updatedCards = cards.filter((card) => card.id !== id);
+
+    saveCards(updatedCards);
+  };
+
+  const handleToggleStatus = (id) => {
+    const updatedCards = cards.map((card) =>
+      card.id === id ? { ...card, active: !card.active } : card,
+    );
+
+    saveCards(updatedCards);
+  };
   return (
     <>
       <div className="page-header">
@@ -43,6 +61,8 @@ function Cards() {
               <NfcCardRow
                 key={card.id}
                 card={card}
+                onDelete={handleDelete}
+                onToggleStatus={handleToggleStatus}
               />
             ))}
           </tbody>

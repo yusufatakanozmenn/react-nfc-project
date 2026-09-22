@@ -1,4 +1,6 @@
-function NfcCardRow({ card }) {
+import { Link } from "react-router-dom";
+
+function NfcCardRow({ card, onDelete, onToggleStatus }) {
   return (
     <tr>
       <td>{card.name}</td>
@@ -16,8 +18,21 @@ function NfcCardRow({ card }) {
         </span>
       </td>
 
-      <td>
-        <button className="edit-button">Düzenle</button>
+      <td className="action-buttons">
+        <Link to={`/cards/edit/${card.id}`} className="edit-button">
+          Düzenle
+        </Link>
+
+        <button
+          className="status-button"
+          onClick={() => onToggleStatus(card.id)}
+        >
+          {card.active ? "Pasife Al" : "Aktif Et"}
+        </button>
+
+        <button className="delete-button" onClick={() => onDelete(card.id)}>
+          Sil
+        </button>
       </td>
     </tr>
   );

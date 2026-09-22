@@ -10,6 +10,7 @@ import Cards from "./pages/Cards";
 import NewCard from "./pages/NewCard";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import EditCard from "./pages/EditCard";
 
 function App() {
   return (
@@ -30,6 +31,8 @@ function App() {
             <Route path="/statistics" element={<Statistics />} />
 
             <Route path="/settings" element={<Settings />} />
+
+            <Route path="/cards/edit/:id" element={<EditCard />} />
           </Routes>
         </main>
       </div>
