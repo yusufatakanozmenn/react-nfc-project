@@ -2,28 +2,42 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import NfcCardRow from "../components/NfcCardRow";
 import { successToast, errorToast } from "../utils/toast";
+import { apiFetch } from "../services/api";
+
 function Cards() {
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/cards")
-      .then((response) => response.json())
-      .then((data) => {
+    const getCards = async () => {
+      try {
+        const response = await apiFetch("/api/cards");
+
+        if (!response.ok) {
+          throw new Error(`Kartlar alınamadı. HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+
         console.log("Spring Boot verisi:", data);
+
         setCards(data);
-      })
-      .catch((error) => {
+      } catch (error) {
         console.error("Kartlar alınamadı:", error);
-      });
+        errorToast("Kartlar alınırken bir hata oluştu.");
+      }
+    };
+
+    getCards();
   }, []);
+
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:8080/api/cards/${id}`, {
+      const response = await apiFetch(`/api/cards/${id}`, {
         method: "DELETE",
       });
 
       if (!response.ok) {
-        throw new Error("Kart silinemedi.");
+        throw new Error(`Kart silinemedi. HTTP: ${response.status}`);
       }
 
       setCards((currentCards) => currentCards.filter((card) => card.id !== id));
@@ -35,17 +49,17 @@ function Cards() {
       errorToast("Kart silinirken bir hata oluştu.");
     }
   };
+
   const handleToggleStatus = async (id) => {
     try {
-      const response = await fetch(
-        `http://localhost:8080/api/cards/${id}/status`,
-        {
-          method: "PATCH",
-        },
-      );
+      const response = await apiFetch(`/api/cards/${id}/status`, {
+        method: "PATCH",
+      });
 
       if (!response.ok) {
-        throw new Error("Kart durumu değiştirilemedi.");
+        throw new Error(
+          `Kart durumu değiştirilemedi. HTTP: ${response.status}`,
+        );
       }
 
       const updatedCard = await response.json();
@@ -65,6 +79,7 @@ function Cards() {
       errorToast("Kart durumu değiştirilirken hata oluştu.");
     }
   };
+
   return (
     <>
       <div className="page-header">
