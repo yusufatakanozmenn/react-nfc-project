@@ -6,30 +6,17 @@ function Cards() {
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
-    const savedCards = JSON.parse(localStorage.getItem("nfcCards")) || [];
-
-    setCards(savedCards);
+    fetch("http://localhost:8080/api/cards")
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Spring Boot verisi:", data);
+        setCards(data);
+      })
+      .catch((error) => {
+        console.error("Kartlar alınamadı:", error);
+      });
   }, []);
 
-  const saveCards = (updatedCards) => {
-    setCards(updatedCards);
-
-    localStorage.setItem("nfcCards", JSON.stringify(updatedCards));
-  };
-
-  const handleDelete = (id) => {
-    const updatedCards = cards.filter((card) => card.id !== id);
-
-    saveCards(updatedCards);
-  };
-
-  const handleToggleStatus = (id) => {
-    const updatedCards = cards.map((card) =>
-      card.id === id ? { ...card, active: !card.active } : card,
-    );
-
-    saveCards(updatedCards);
-  };
   return (
     <>
       <div className="page-header">
@@ -58,12 +45,7 @@ function Cards() {
 
           <tbody>
             {cards.map((card) => (
-              <NfcCardRow
-                key={card.id}
-                card={card}
-                onDelete={handleDelete}
-                onToggleStatus={handleToggleStatus}
-              />
+              <NfcCardRow key={card.id} card={card} />
             ))}
           </tbody>
         </table>
