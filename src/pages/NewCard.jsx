@@ -35,28 +35,30 @@ function NewCard() {
     return code;
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const code = generateCode();
+    try {
+      const response = await fetch("http://localhost:8080/api/cards", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const newCard = {
-      id: Date.now(),
-      ...formData,
-      code: code,
-      scans: 0,
-      active: true,
-    };
+      if (!response.ok) {
+        throw new Error("Kart oluşturulamadı.");
+      }
 
-    const existingCards = JSON.parse(localStorage.getItem("nfcCards")) || [];
+      const createdCard = await response.json();
 
-    const updatedCards = [...existingCards, newCard];
+      console.log("Oluşturulan kart:", createdCard);
 
-    localStorage.setItem("nfcCards", JSON.stringify(updatedCards));
-
-    console.log("Yeni Kart:", newCard);
-
-    navigate("/cards");
+      navigate("/cards");
+    } catch (error) {
+      console.error("Kart oluşturma hatası:", error);
+    }
   };
 
   return (
