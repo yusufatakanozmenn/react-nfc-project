@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
+import { successToast, errorToast } from "../utils/toast";
 function NewCard() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -55,9 +55,13 @@ function NewCard() {
 
       console.log("Oluşturulan kart:", createdCard);
 
+      successToast("Kart başarıyla oluşturuldu.");
+
       navigate("/cards");
     } catch (error) {
       console.error("Kart oluşturma hatası:", error);
+
+      errorToast("Kart oluşturulurken bir hata oluştu.");
     }
   };
 

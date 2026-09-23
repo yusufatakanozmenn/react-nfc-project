@@ -5,6 +5,7 @@ import com.webonix.webonix_tap_backend.dto.NfcCardResponse;
 import com.webonix.webonix_tap_backend.service.NfcCardService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import com.webonix.webonix_tap_backend.dto.UpdateNfcCardRequest;
 
 import java.util.List;
 
@@ -29,5 +30,29 @@ public class NfcCardController {
             @RequestBody CreateNfcCardRequest request
     ) {
         return nfcCardService.createCard(request);
+    }
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCard(@PathVariable Long id) {
+        nfcCardService.deleteCard(id);
+    }
+    @PatchMapping("/{id}/status")
+    public NfcCardResponse toggleStatus(
+            @PathVariable Long id
+    ) {
+        return nfcCardService.toggleStatus(id);
+    }
+    @GetMapping("/{id}")
+    public NfcCardResponse getCardById(
+            @PathVariable Long id
+    ) {
+        return nfcCardService.getCardById(id);
+    }
+    @PutMapping("/{id}")
+    public NfcCardResponse updateCard(
+            @PathVariable Long id,
+            @RequestBody UpdateNfcCardRequest request
+    ) {
+        return nfcCardService.updateCard(id, request);
     }
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { successToast, errorToast } from "../utils/toast";
+
 function EditCard() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -11,50 +13,80 @@ function EditCard() {
     destinationUrl: "",
   });
 
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const cards = JSON.parse(localStorage.getItem("nfcCards")) || [];
+    const getCard = async () => {
+      try {
+        const response = await fetch(`http://localhost:8080/api/cards/${id}`);
 
-    const card = cards.find((card) => card.id === Number(id));
+        if (!response.ok) {
+          throw new Error("Kart bulunamadı.");
+        }
 
-    if (!card) {
-      navigate("/cards");
-      return;
-    }
+        const card = await response.json();
 
-    setFormData({
-      name: card.name,
-      type: card.type,
-      destinationUrl: card.destinationUrl,
-    });
+        setFormData({
+          name: card.name,
+          type: card.type,
+          destinationUrl: card.destinationUrl,
+        });
+      } catch (error) {
+        console.error("Kart getirme hatası:", error);
+
+        errorToast("Kart bilgileri alınamadı.");
+
+        navigate("/cards");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getCard();
   }, [id, navigate]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
 
-    setFormData({
-      ...formData,
+    setFormData((currentData) => ({
+      ...currentData,
       [name]: value,
-    });
+    }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    const cards = JSON.parse(localStorage.getItem("nfcCards")) || [];
+    try {
+      const response = await fetch(`http://localhost:8080/api/cards/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const updatedCards = cards.map((card) =>
-      card.id === Number(id)
-        ? {
-            ...card,
-            ...formData,
-          }
-        : card,
-    );
+      if (!response.ok) {
+        throw new Error("Kart güncellenemedi.");
+      }
 
-    localStorage.setItem("nfcCards", JSON.stringify(updatedCards));
+      const updatedCard = await response.json();
 
-    navigate("/cards");
+      console.log("Güncellenen kart:", updatedCard);
+
+      successToast("Kart başarıyla güncellendi.");
+
+      navigate("/cards");
+    } catch (error) {
+      console.error("Kart güncelleme hatası:", error);
+
+      errorToast("Kart güncellenirken hata oluştu.");
+    }
   };
+
+  if (loading) {
+    return <p>Kart bilgileri yükleniyor...</p>;
+  }
 
   return (
     <>
@@ -68,9 +100,10 @@ function EditCard() {
       <div className="form-container">
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>Kart Adı</label>
+            <label htmlFor="name">Kart Adı</label>
 
             <input
+              id="name"
               type="text"
               name="name"
               value={formData.name}
@@ -80,9 +113,10 @@ function EditCard() {
           </div>
 
           <div className="form-group">
-            <label>Kart Türü</label>
+            <label htmlFor="type">Kart Türü</label>
 
             <select
+              id="type"
               name="type"
               value={formData.type}
               onChange={handleChange}
@@ -99,9 +133,10 @@ function EditCard() {
           </div>
 
           <div className="form-group">
-            <label>Hedef URL</label>
+            <label htmlFor="destinationUrl">Hedef URL</label>
 
             <input
+              id="destinationUrl"
               type="url"
               name="destinationUrl"
               value={formData.destinationUrl}

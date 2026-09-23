@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import NfcCardRow from "../components/NfcCardRow";
-
+import { successToast, errorToast } from "../utils/toast";
 function Cards() {
   const [cards, setCards] = useState([]);
 
@@ -16,7 +16,55 @@ function Cards() {
         console.error("Kartlar alınamadı:", error);
       });
   }, []);
+  const handleDelete = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/cards/${id}`, {
+        method: "DELETE",
+      });
 
+      if (!response.ok) {
+        throw new Error("Kart silinemedi.");
+      }
+
+      setCards((currentCards) => currentCards.filter((card) => card.id !== id));
+
+      successToast("Kart başarıyla silindi.");
+    } catch (error) {
+      console.error("Silme hatası:", error);
+
+      errorToast("Kart silinirken bir hata oluştu.");
+    }
+  };
+  const handleToggleStatus = async (id) => {
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/cards/${id}/status`,
+        {
+          method: "PATCH",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Kart durumu değiştirilemedi.");
+      }
+
+      const updatedCard = await response.json();
+
+      setCards((currentCards) =>
+        currentCards.map((card) => (card.id === id ? updatedCard : card)),
+      );
+
+      if (updatedCard.active) {
+        successToast("Kart aktif hale getirildi.");
+      } else {
+        successToast("Kart pasife alındı.");
+      }
+    } catch (error) {
+      console.error("Durum değiştirme hatası:", error);
+
+      errorToast("Kart durumu değiştirilirken hata oluştu.");
+    }
+  };
   return (
     <>
       <div className="page-header">
@@ -45,7 +93,12 @@ function Cards() {
 
           <tbody>
             {cards.map((card) => (
-              <NfcCardRow key={card.id} card={card} />
+              <NfcCardRow
+                key={card.id}
+                card={card}
+                onDelete={handleDelete}
+                onToggleStatus={handleToggleStatus}
+              />
             ))}
           </tbody>
         </table>

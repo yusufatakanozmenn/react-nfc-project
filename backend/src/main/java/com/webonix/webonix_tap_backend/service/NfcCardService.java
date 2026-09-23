@@ -5,6 +5,7 @@ import com.webonix.webonix_tap_backend.dto.NfcCardResponse;
 import com.webonix.webonix_tap_backend.entity.NfcCard;
 import com.webonix.webonix_tap_backend.repository.NfcCardRepository;
 import org.springframework.stereotype.Service;
+import com.webonix.webonix_tap_backend.dto.UpdateNfcCardRequest;
 
 import java.util.List;
 import java.util.UUID;
@@ -72,5 +73,57 @@ public class NfcCardService {
                 card.getScans(),
                 card.getActive()
         );
+    }
+
+    public void deleteCard(Long id) {
+
+    if (!nfcCardRepository.existsById(id)) {
+        throw new RuntimeException("Kart bulunamadı");
+    }
+
+    nfcCardRepository.deleteById(id);
+    }
+    public NfcCardResponse toggleStatus(Long id) {
+
+    NfcCard card = nfcCardRepository
+            .findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException("Kart bulunamadı")
+            );
+
+    card.setActive(!Boolean.TRUE.equals(card.getActive()));
+
+    NfcCard updatedCard = nfcCardRepository.save(card);
+
+    return toResponse(updatedCard);
+    }
+    public NfcCardResponse getCardById(Long id) {
+
+    NfcCard card = nfcCardRepository
+            .findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException("Kart bulunamadı")
+            );
+
+    return toResponse(card);
+    }
+    public NfcCardResponse updateCard(
+        Long id,
+        UpdateNfcCardRequest request
+    ) {
+
+    NfcCard card = nfcCardRepository
+            .findById(id)
+            .orElseThrow(() ->
+                    new RuntimeException("Kart bulunamadı")
+            );
+
+    card.setName(request.name());
+    card.setType(request.type());
+    card.setDestinationUrl(request.destinationUrl());
+
+    NfcCard updatedCard = nfcCardRepository.save(card);
+
+    return toResponse(updatedCard);
     }
 }
