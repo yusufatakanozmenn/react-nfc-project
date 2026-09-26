@@ -1,3 +1,4 @@
+import { logout } from "../auth/session";
 import { NavLink } from "react-router-dom";
 
 function Sidebar() {
@@ -6,7 +7,7 @@ function Sidebar() {
       <nav>
         <ul>
           <li>
-            <NavLink to="/">Dashboard</NavLink>
+            <NavLink to="/" end>Dashboard</NavLink>
           </li>
 
           <li>
@@ -26,6 +27,7 @@ function Sidebar() {
           </li>
         </ul>
       </nav>
+      <button className="sidebar-logout" onClick={logout}>Çıkış Yap</button>
     </aside>
   );
 }

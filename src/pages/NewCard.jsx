@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/api";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { successToast, errorToast } from "../utils/toast";
@@ -9,7 +10,6 @@ function NewCard() {
     destinationUrl: "",
   });
 
-  const [generatedCode, setGeneratedCode] = useState("");
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -20,26 +20,11 @@ function NewCard() {
     });
   };
 
-  const generateCode = () => {
-    const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const randomValues = new Uint32Array(6);
-
-    crypto.getRandomValues(randomValues);
-
-    let code = "";
-
-    randomValues.forEach((value) => {
-      code += characters[value % characters.length];
-    });
-
-    return code;
-  };
-
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:8080/api/cards", {
+      const response = await apiFetch("/api/cards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,21 +112,7 @@ function NewCard() {
           </button>
         </form>
 
-        {generatedCode && (
-          <div className="card-result">
-            <h3>Kart oluşturuldu</h3>
 
-            <p>
-              <strong>Kart Kodu:</strong> {generatedCode}
-            </p>
-
-            <p>
-              <strong>NFC Linki:</strong>
-            </p>
-
-            <code>https://go.webonix.com.tr/r/{generatedCode}</code>
-          </div>
-        )}
       </div>
     </>
   );

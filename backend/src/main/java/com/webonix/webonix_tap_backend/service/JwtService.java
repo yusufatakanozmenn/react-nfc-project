@@ -13,16 +13,12 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final String SECRET =
-            "webonix-tap-super-secret-key-2026-change-this-in-production";
+    private final SecretKey signingKey;
+    private static final long EXPIRATION_TIME = 1000L * 60 * 60 * 24;
 
-    private static final long EXPIRATION_TIME =
-            1000 * 60 * 60 * 24;
-
-    private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(
-                SECRET.getBytes(StandardCharsets.UTF_8)
-        );
+    public JwtService(@org.springframework.beans.factory.annotation.Value("${app.jwt.secret}") String secret) {
+        // Keys validates the minimum HMAC key length; there is no shared fallback secret.
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(
@@ -39,7 +35,7 @@ public class JwtService {
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiration)
-                .signWith(getSigningKey())
+                .signWith(signingKey)
                 .compact();
     }
 
@@ -56,7 +52,7 @@ public class JwtService {
         try {
             Claims claims = getClaims(token);
 
-            return claims.getExpiration()
+            return claims.getSubject() != null && claims.getExpiration() != null && claims.getExpiration()
                     .after(new Date());
 
         } catch (JwtException | IllegalArgumentException exception) {
@@ -64,9 +60,9 @@ public class JwtService {
         }
     }
 
-    private Claims getClaims(String token) {
+    public Claims getClaims(String token) {
         return Jwts.parser()
-                .verifyWith(getSigningKey())
+                .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

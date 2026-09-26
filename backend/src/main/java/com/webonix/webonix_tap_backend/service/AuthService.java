@@ -7,6 +7,8 @@ import com.webonix.webonix_tap_backend.repository.AppUserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.webonix.webonix_tap_backend.dto.LoginRequest;
+import com.webonix.webonix_tap_backend.dto.CurrentUserResponse;
+import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -31,7 +33,7 @@ public class AuthService {
 
         String email = request.email()
                 .trim()
-                .toLowerCase();
+                .toLowerCase(Locale.ROOT);
 
         if (appUserRepository.existsByEmail(email)) {
             throw new RuntimeException("Bu email adresi zaten kayıtlı.");
@@ -63,9 +65,14 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
 
+    if (request.email() == null || request.email().isBlank()
+            || request.password() == null || request.password().isBlank()) {
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email ve şifre gereklidir.");
+    }
+
     String email = request.email()
             .trim()
-            .toLowerCase();
+            .toLowerCase(Locale.ROOT);
 
     AppUser user = appUserRepository
             .findByEmail(email)
@@ -107,5 +114,11 @@ public class AuthService {
         token,
         "Giriş başarılı."
     );
+    }
+    public CurrentUserResponse currentUser(String email) {
+        AppUser user = appUserRepository.findByEmail(email)
+                .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        return new CurrentUserResponse(user.getId(), user.getName(), user.getEmail(), user.getRole());
     }
 }

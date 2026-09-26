@@ -6,6 +6,8 @@ import com.webonix.webonix_tap_backend.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import com.webonix.webonix_tap_backend.dto.LoginRequest;
+import com.webonix.webonix_tap_backend.dto.CurrentUserResponse;
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -15,6 +17,11 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    @GetMapping("/me")
+    public CurrentUserResponse me(Principal principal) {
+        return authService.currentUser(principal.getName());
     }
 
     @PostMapping("/register")

@@ -1,4 +1,6 @@
-import { Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import { initializeAuth } from "./auth/session";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -13,20 +15,29 @@ import ProtectedLayout from "./components/ProtectedLayout";
 import "./css/App.css";
 
 function App() {
+  useEffect(initializeAuth, []);
   return (
     <Routes>
-      {/* Tamamen bağımsız login */}
+      {/* Herkese açık, bağımsız login ekranı */}
       <Route path="/login" element={<Login />} />
 
-      {/* Giriş yapılması gereken alanlar */}
+      {/* Bütün yönetim sayfaları korumalı */}
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Dashboard />} />
+
         <Route path="/cards" element={<Cards />} />
+
         <Route path="/cards/new" element={<NewCard />} />
+
         <Route path="/cards/edit/:id" element={<EditCard />} />
+
         <Route path="/statistics" element={<Statistics />} />
+
         <Route path="/settings" element={<Settings />} />
       </Route>
+
+      {/* Bilinmeyen adresleri başlangıca gönder */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

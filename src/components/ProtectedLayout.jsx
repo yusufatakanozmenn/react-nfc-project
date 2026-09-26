@@ -1,14 +1,15 @@
 import { Navigate, Outlet } from "react-router-dom";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import AuthStatus from "./AuthStatus";
+import { useAuth } from "../auth/useAuth";
 
 function ProtectedLayout() {
-  const token = localStorage.getItem("token");
+  const { status } = useAuth();
+  if (status === "guest") return <Navigate to="/login" replace />;
+  if (status !== "authenticated") return <AuthStatus status={status} />;
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
+  // Kullanıcı doğrulandı, paneli göster
   return (
     <div className="panel-layout">
       <Header />

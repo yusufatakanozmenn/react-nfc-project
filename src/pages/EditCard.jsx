@@ -1,3 +1,4 @@
+import { apiFetch } from "../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -16,15 +17,17 @@ function EditCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const controller = new AbortController();
     const getCard = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/api/cards/${id}`);
+        const response = await apiFetch(`/api/cards/${id}`, { signal: controller.signal });
 
         if (!response.ok) {
           throw new Error("Kart bulunamadı.");
         }
 
         const card = await response.json();
+        if (controller.signal.aborted) return;
 
         setFormData({
           name: card.name,
@@ -32,17 +35,19 @@ function EditCard() {
           destinationUrl: card.destinationUrl,
         });
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Kart getirme hatası:", error);
 
         errorToast("Kart bilgileri alınamadı.");
 
         navigate("/cards");
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     getCard();
+    return () => controller.abort();
   }, [id, navigate]);
 
   const handleChange = (event) => {
@@ -58,7 +63,7 @@ function EditCard() {
     event.preventDefault();
 
     try {
-      const response = await fetch(`http://localhost:8080/api/cards/${id}`, {
+      const response = await apiFetch(`/api/cards/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

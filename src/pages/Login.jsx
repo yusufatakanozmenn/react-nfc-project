@@ -1,23 +1,20 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 
 import { successToast, errorToast } from "../utils/toast";
 
+import { useAuth } from "../auth/useAuth";
+import { login } from "../auth/session";
+import AuthStatus from "../components/AuthStatus";
+
 function Login() {
-  const navigate = useNavigate();
-
-  const token = localStorage.getItem("token");
-
+  const { status } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
   const [loading, setLoading] = useState(false);
-
-  if (token) {
-    return <Navigate to="/" replace />;
-  }
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -31,46 +28,21 @@ function Login() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
+    if (loading) return;
+    setLoading(true);
     try {
-      setLoading(true);
-
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (!response.ok) {
-        throw new Error("Email veya şifre hatalı.");
-      }
-
-      const data = await response.json();
-
-      localStorage.setItem("token", data.token);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          id: data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-        }),
-      );
-
-      successToast("Giriş başarılı.");
-
-      navigate("/");
+      await login(formData);
     } catch (error) {
-      console.error("Login hatası:", error);
-
-      errorToast("E-posta veya şifre hatalı.");
+      errorToast(error.message || "Giriş işlemi başarısız oldu.");
+      return;
     } finally {
       setLoading(false);
     }
+    successToast("Giriş başarılı.");
   };
+
+  if (status === "checking" || status === "error") return <AuthStatus status={status} />;
+  if (status === "authenticated") return <Navigate to="/" replace />;
 
   return (
     <div className="auth-page">

@@ -8,9 +8,10 @@ function Cards() {
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const getCards = async () => {
       try {
-        const response = await apiFetch("/api/cards");
+        const response = await apiFetch("/api/cards", { signal: controller.signal });
 
         if (!response.ok) {
           throw new Error(`Kartlar alınamadı. HTTP: ${response.status}`);
@@ -18,16 +19,16 @@ function Cards() {
 
         const data = await response.json();
 
-        console.log("Spring Boot verisi:", data);
-
-        setCards(data);
+        if (!controller.signal.aborted) setCards(data);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error("Kartlar alınamadı:", error);
         errorToast("Kartlar alınırken bir hata oluştu.");
       }
     };
 
     getCards();
+    return () => controller.abort();
   }, []);
 
   const handleDelete = async (id) => {

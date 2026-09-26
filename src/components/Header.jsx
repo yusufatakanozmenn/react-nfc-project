@@ -1,10 +1,13 @@
+import { useAuth } from "../auth/useAuth";
+
 function Header() {
+  const { user } = useAuth();
   return (
     <header className="header">
       <h2>Webonix Tap</h2>
 
       <div>
-        <span>Yusuf Atakan</span>
+        <span>{user.name}</span>
       </div>
     </header>
   );

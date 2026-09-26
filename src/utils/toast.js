@@ -4,6 +4,10 @@ import "butteruptoasts/src/butterup.css";
 const butterup =
   butterupImport?.default ?? butterupImport?.butterup ?? butterupImport;
 
+// Butterup 2 uses global options, not per-toast duration/maxToasts.
+butterup.options.toastLife = 3000;
+butterup.options.maxToasts = 3;
+
 export const successToast = (message) => {
   butterup.toast({
     title: "Başarılı",
@@ -12,8 +16,6 @@ export const successToast = (message) => {
     location: "top-right",
     icon: true,
     dismissable: true,
-    duration: 3000,
-    maxToasts: 3,
   });
 };
 
@@ -25,8 +27,6 @@ export const errorToast = (message) => {
     location: "top-right",
     icon: true,
     dismissable: true,
-    duration: 3000,
-    maxToasts: 3,
   });
 };
 
@@ -38,8 +38,6 @@ export const warningToast = (message) => {
     location: "top-right",
     icon: true,
     dismissable: true,
-    duration: 3000,
-    maxToasts: 3,
   });
 };
 
@@ -51,7 +49,5 @@ export const infoToast = (message) => {
     location: "top-right",
     icon: true,
     dismissable: true,
-    duration: 3000,
-    maxToasts: 3,
   });
 };
