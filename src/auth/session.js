@@ -83,3 +83,16 @@ export const initializeAuth = () => {
     window.removeEventListener("storage", onStorage);
   };
 };
+
+export const updateProfile = async (profile) => {
+  const attempt = revision;
+  const token = localStorage.getItem("token");
+  if (state.status !== "authenticated" || !token) throw new Error("Lütfen tekrar giriş yapın.");
+  const response = await apiFetch("/api/auth/me", { method: "PUT", body: JSON.stringify(profile) });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message || "Bilgiler güncellenemedi.");
+  if (attempt !== revision || token !== localStorage.getItem("token")) throw new Error("Oturum değişti. Lütfen tekrar giriş yapın.");
+  localStorage.setItem("user", JSON.stringify(data));
+  publish("authenticated", data);
+  return data;
+};

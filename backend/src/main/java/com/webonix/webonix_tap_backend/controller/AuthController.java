@@ -24,6 +24,12 @@ public class AuthController {
         return authService.currentUser(principal.getName());
     }
 
+    @PutMapping("/me")
+    public CurrentUserResponse updateMe(Principal principal,
+            @RequestBody com.webonix.webonix_tap_backend.dto.UpdateProfileRequest request) {
+        return authService.updateProfile(principal.getName(), request);
+    }
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse register(

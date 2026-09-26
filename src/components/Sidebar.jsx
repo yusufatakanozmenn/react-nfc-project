@@ -1,22 +1,25 @@
 import { logout } from "../auth/session";
 import { NavLink } from "react-router-dom";
 
+import { useAuth } from "../auth/useAuth";
+import { isAdmin } from "../auth/permissions";
+
 function Sidebar() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
   return (
     <aside className="sidebar">
       <nav>
         <ul>
-          <li>
-            <NavLink to="/" end>Dashboard</NavLink>
-          </li>
+          {admin && <li><NavLink to="/" end>Dashboard</NavLink></li>}
 
           <li>
-            <NavLink to="/cards">Kartlarım</NavLink>
+            <NavLink to="/cards">{admin ? "Tüm Kartlar" : "Kartlarım"}</NavLink>
           </li>
 
-          <li>
-            <NavLink to="/cards/new">Yeni Kart</NavLink>
-          </li>
+          {admin && <li><NavLink to="/customers">Müşteriler</NavLink></li>}
+
+          {admin && <li><NavLink to="/cards/new">Yeni Kart</NavLink></li>}
 
           <li>
             <NavLink to="/statistics">İstatistikler</NavLink>

@@ -3,7 +3,7 @@ package com.webonix.webonix_tap_backend.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "nfc_cards")
+@Table(name = "nfc_cards", indexes = @Index(name = "idx_nfc_cards_owner", columnList = "owner_id"))
 public class NfcCard {
 
     @Id
@@ -19,6 +19,13 @@ public class NfcCard {
 
     @Column(name = "destination_url", nullable = false)
     private String destinationUrl;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", foreignKey = @ForeignKey(name = "fk_nfc_cards_owner"))
+    private AppUser owner;
+
+    public AppUser getOwner() { return owner; }
+    public void setOwner(AppUser owner) { this.owner = owner; }
 
     private Integer scans;
 

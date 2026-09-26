@@ -1,13 +1,16 @@
-import { apiFetch } from "../services/api";
+import OwnerSelect from "../components/OwnerSelect";
+import { apiJson } from "../services/api";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { successToast, errorToast } from "../utils/toast";
 function NewCard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     name: "",
     type: "",
     destinationUrl: "",
+    ownerId: /^\d+$/.test(searchParams.get("ownerId") ?? "") ? searchParams.get("ownerId") : "",
   });
 
 
@@ -24,21 +27,13 @@ function NewCard() {
     event.preventDefault();
 
     try {
-      const response = await apiFetch("/api/cards", {
+      await apiJson("/api/cards", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, ownerId: formData.ownerId === "" ? null : Number(formData.ownerId) }),
       });
-
-      if (!response.ok) {
-        throw new Error("Kart oluşturulamadı.");
-      }
-
-      const createdCard = await response.json();
-
-      console.log("Oluşturulan kart:", createdCard);
 
       successToast("Kart başarıyla oluşturuldu.");
 
@@ -46,7 +41,7 @@ function NewCard() {
     } catch (error) {
       console.error("Kart oluşturma hatası:", error);
 
-      errorToast("Kart oluşturulurken bir hata oluştu.");
+      errorToast(error.message);
     }
   };
 
@@ -107,6 +102,7 @@ function NewCard() {
             />
           </div>
 
+          <OwnerSelect value={formData.ownerId} onChange={(ownerId) => setFormData((current) => ({ ...current, ownerId }))} />
           <button type="submit" className="primary-button">
             Kartı Oluştur
           </button>

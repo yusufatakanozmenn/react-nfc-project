@@ -1,5 +1,7 @@
 # Proje devri ve login düzeltmesi — 26 Eylül 2026
 
+Bu belge ilk devir çalışmasının kaydıdır. Daha sonra eklenen roller, kart sahipliği, gerçek toplam istatistikler ve profil ayarları için [güncel geliştirme notlarına](ROLLER-VE-SAHIPLIK.md) bakın.
+
 ## Doğrulanan mevcut durum
 
 - React 19.2.8, React Router 7.18.4, Vite 8.3.0, Butterup 2.0.1; Java 21, Spring Boot 4.1.1, JJWT 0.13.0.

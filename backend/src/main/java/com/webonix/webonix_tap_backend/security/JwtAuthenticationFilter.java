@@ -36,11 +36,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Parse once: signature and expiration are verified together.
                 var claims = jwtService.getClaims(authorization.substring(7));
                 if (claims.getSubject() != null && claims.getExpiration() != null) {
-                    users.findByEmail(claims.getSubject())
+                    users.findById(Long.parseLong(claims.getSubject()))
                             .filter(user -> Boolean.TRUE.equals(user.getActive()))
                             .ifPresent(user -> {
                                 var authentication = new UsernamePasswordAuthenticationToken(
-                                        user.getEmail(), null,
+                                        user.getId().toString(), null,
                                         List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole())));
                                 SecurityContextHolder.getContext().setAuthentication(authentication);
                             });

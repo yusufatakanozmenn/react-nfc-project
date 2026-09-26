@@ -61,11 +61,13 @@ class WebonixTapBackendApplicationTests {
     @BeforeEach
     void setup() {
         user = new AppUser("Database Name", EMAIL, encoder.encode(PASSWORD), "USER", true);
+        org.springframework.test.util.ReflectionTestUtils.setField(user, "id", 1L);
         when(users.findByEmail(EMAIL)).thenReturn(Optional.of(user));
-        when(cards.getAllCards()).thenReturn(List.of());
+        when(users.findById(1L)).thenReturn(Optional.of(user));
+        when(cards.getAllCards("1")).thenReturn(List.of());
     }
 
-    private String bearer() { return "Bearer " + jwt.generateToken(EMAIL, "USER"); }
+    private String bearer() { return "Bearer " + jwt.generateToken(1L, "USER"); }
 
     @Test void successfulLoginThenMeAndProtectedCards() throws Exception {
         String request = mapper.writeValueAsString(java.util.Map.of("email", EMAIL.toUpperCase(), "password", PASSWORD));
@@ -94,7 +96,7 @@ class WebonixTapBackendApplicationTests {
     }
 
     @Test void expiredTokenIsUnauthorized() throws Exception {
-        String token = Jwts.builder().subject(EMAIL).expiration(new Date(System.currentTimeMillis() - 10000))
+        String token = Jwts.builder().subject("1").expiration(new Date(System.currentTimeMillis() - 10000))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
         mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
@@ -102,12 +104,12 @@ class WebonixTapBackendApplicationTests {
 
     @Test void differentSigningKeyIsUnauthorized() throws Exception {
         var other = new JwtService(UUID.randomUUID().toString().repeat(2));
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + other.generateToken(EMAIL, "ADMIN")))
+        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + other.generateToken(1L, "ADMIN")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void tokenWithoutExpirationIsUnauthorized() throws Exception {
-        String token = Jwts.builder().subject(EMAIL)
+        String token = Jwts.builder().subject("1")
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
         mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
@@ -122,7 +124,7 @@ class WebonixTapBackendApplicationTests {
 
     @Test void deletedUserCannotUsePreviouslyIssuedToken() throws Exception {
         String token = bearer();
-        when(users.findByEmail(EMAIL)).thenReturn(Optional.empty());
+        when(users.findById(1L)).thenReturn(Optional.empty());
         mvc.perform(get("/api/auth/me").header("Authorization", token)).andExpect(status().isUnauthorized());
     }
 

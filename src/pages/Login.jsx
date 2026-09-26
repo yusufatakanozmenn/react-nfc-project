@@ -4,11 +4,12 @@ import { Navigate } from "react-router-dom";
 import { successToast, errorToast } from "../utils/toast";
 
 import { useAuth } from "../auth/useAuth";
+import { homePath } from "../auth/permissions";
 import { login } from "../auth/session";
 import AuthStatus from "../components/AuthStatus";
 
 function Login() {
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,7 +43,7 @@ function Login() {
   };
 
   if (status === "checking" || status === "error") return <AuthStatus status={status} />;
-  if (status === "authenticated") return <Navigate to="/" replace />;
+  if (status === "authenticated") return <Navigate to={homePath(user)} replace />;
 
   return (
     <div className="auth-page">

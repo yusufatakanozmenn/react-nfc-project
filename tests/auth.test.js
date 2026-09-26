@@ -151,3 +151,40 @@ test("logout followed by session restore remains guest", async () => {
   assert.equal(getSession().status, "guest");
   assert.equal(storage.size, 0);
 });
+
+test("profile update refreshes the shared user without changing the token", async () => {
+  const { updateProfile } = await import("../src/auth/session.js");
+  await successfulLogin();
+  const updated = { ...user, name: "Updated Name", email: "updated@example.test" };
+  globalThis.fetch = async () => json(updated);
+  await updateProfile({ name: updated.name, email: updated.email, currentPassword: "test-only" });
+  assert.deepEqual(getSession().user, updated);
+  assert.deepEqual(JSON.parse(localStorage.getItem("user")), updated);
+  assert.equal(localStorage.getItem("token"), "new-token");
+});
+test("wrong profile password leaves the session and current identity intact", async () => {
+  const { updateProfile } = await import("../src/auth/session.js");
+  await successfulLogin();
+  globalThis.fetch = async () => json({ message: "Mevcut şifre hatalı." }, 400);
+  await assert.rejects(updateProfile({}), /Mevcut şifre/);
+  assert.deepEqual(getSession().user, user);
+  assert.equal(getSession().status, "authenticated");
+});
+test("a profile response arriving after logout cannot restore the user", async () => {
+  const { updateProfile } = await import("../src/auth/session.js");
+  await successfulLogin();
+  const pending = deferred();
+  globalThis.fetch = () => pending.promise;
+  const saving = updateProfile({});
+  logout(); pending.resolve(json(user));
+  await assert.rejects(saving, /Oturum değişti/);
+  assert.equal(getSession().status, "guest");
+  assert.equal(storage.size, 0);
+});
+test("only ADMIN opens the admin home; USER starts at own cards", async () => {
+  const { isAdmin, homePath } = await import("../src/auth/permissions.js");
+  assert.equal(homePath({ role: "ADMIN" }), "/");
+  assert.equal(homePath(user), "/cards");
+  assert.equal(isAdmin(user), false);
+  assert.equal(isAdmin(null), false);
+});

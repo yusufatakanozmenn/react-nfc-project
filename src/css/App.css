@@ -191,7 +191,7 @@
 .table-container {
   background-color: white;
   border-radius: 12px;
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
@@ -690,3 +690,27 @@ body,
   .panel-content { padding: 20px; }
   .table-container { overflow-x: auto; }
 }
+
+.statistics-table { margin-top: 24px; }
+.owner-assignment { margin-top: 32px; padding-top: 24px; border-top: 1px solid #e5e7eb; }
+.owner-assignment h2 { margin-bottom: 20px; font-size: 20px; }
+.field-hint { margin-top: 8px; color: #64748b; font-size: 13px; }
+.form-error { color: #b91c1c; margin: 16px 0; }
+.card-destination { max-width: 240px; overflow-wrap: anywhere; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.customer-grid { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 24px; align-items: start; }
+.customer-create { width: 100%; }
+.customer-grid h2 { font-size: 20px; color: #1f2937; margin-bottom: 12px; }
+.customer-create form { margin-top: 24px; }
+.customer-create fieldset { border: 0; min-width: 0; padding: 0; }
+.customer-list { min-width: 0; }
+.selected-customer { background: #eff6ff; }
+.customer-cards { margin-top: 24px; max-width: none; }
+.customer-cards > p { margin-bottom: 16px; }
+.customer-card-list { list-style: none; margin: 20px 0; padding: 0; }
+.customer-card-list li { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px solid #e5e7eb; }
+.customer-card-list small { color: #64748b; }
+.customer-assign-form { margin-top: 24px; }
+.customer-new-card { display: inline-block; margin-top: 16px; }
+@media (max-width: 1100px) { .customer-grid { grid-template-columns: 1fr; } .customer-create { max-width: none; } }

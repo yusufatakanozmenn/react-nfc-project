@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 
-function NfcCardRow({ card, onDelete, onToggleStatus }) {
+function NfcCardRow({ card, admin, onDelete, onToggleStatus }) {
   return (
     <tr>
       <td>{card.name}</td>
       <td>{card.type}</td>
       <td>{card.code}</td>
+      {admin && <td>{card.ownerName ?? "Atanmamış"}</td>}
+      <td className="card-destination">{card.destinationUrl}</td>
       <td>{card.scans}</td>
 
       <td>
@@ -30,9 +32,9 @@ function NfcCardRow({ card, onDelete, onToggleStatus }) {
           {card.active ? "Pasife Al" : "Aktif Et"}
         </button>
 
-        <button className="delete-button" onClick={() => onDelete(card.id)}>
+        {admin && <button className="delete-button" onClick={() => onDelete(card.id)}>
           Sil
-        </button>
+        </button>}
       </td>
     </tr>
   );

@@ -1,18 +1,7 @@
-import StatCard from "../components/StatCard";
-
-function Dashboard() {
-  return (
-    <>
-      <h1>Dashboard</h1>
-
-      <div className="stat-cards">
-        <StatCard title="Toplam Kart" value={12} />
-        <StatCard title="Bugünkü Okutma" value={35} />
-        <StatCard title="Bu Ay Okutma" value={542} />
-        <StatCard title="Toplam Okutma" value={1284} />
-      </div>
-    </>
-  );
+import CardStatistics from "../components/CardStatistics";
+export default function Dashboard() {
+  return <>
+    <div className="page-header"><div><h1>Dashboard</h1><p>Tüm NFC kartlarına genel bakış.</p></div></div>
+    <CardStatistics detail={false} />
+  </>;
 }
-
-export default Dashboard;

@@ -1,7 +1,6 @@
 package com.webonix.webonix_tap_backend.service;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
@@ -22,7 +21,7 @@ public class JwtService {
     }
 
     public String generateToken(
-            String email,
+            Long userId,
             String role
     ) {
         Date now = new Date();
@@ -31,33 +30,12 @@ public class JwtService {
                 new Date(now.getTime() + EXPIRATION_TIME);
 
         return Jwts.builder()
-                .subject(email)
+                .subject(userId.toString())
                 .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiration)
                 .signWith(signingKey)
                 .compact();
-    }
-
-    public String extractEmail(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    public String extractRole(String token) {
-        return getClaims(token)
-                .get("role", String.class);
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            Claims claims = getClaims(token);
-
-            return claims.getSubject() != null && claims.getExpiration() != null && claims.getExpiration()
-                    .after(new Date());
-
-        } catch (JwtException | IllegalArgumentException exception) {
-            return false;
-        }
     }
 
     public Claims getClaims(String token) {

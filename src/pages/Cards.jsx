@@ -4,7 +4,14 @@ import NfcCardRow from "../components/NfcCardRow";
 import { successToast, errorToast } from "../utils/toast";
 import { apiFetch } from "../services/api";
 
+import { useAuth } from "../auth/useAuth";
+import { isAdmin } from "../auth/permissions";
+
 function Cards() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [cards, setCards] = useState([]);
 
   useEffect(() => {
@@ -23,7 +30,9 @@ function Cards() {
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error("Kartlar alınamadı:", error);
-        errorToast("Kartlar alınırken bir hata oluştu.");
+        setError("Kartlar yüklenemedi. Lütfen sayfayı yenileyerek tekrar deneyin.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
@@ -85,15 +94,17 @@ function Cards() {
     <>
       <div className="page-header">
         <div>
-          <h1>Kartlarım</h1>
+          <h1>{admin ? "Tüm Kartlar" : "Kartlarım"}</h1>
           <p>NFC kartlarınızı buradan yönetebilirsiniz.</p>
         </div>
 
-        <Link to="/cards/new" className="primary-button">
+        {admin && <Link to="/cards/new" className="primary-button">
           + Yeni Kart
-        </Link>
+        </Link>}
       </div>
 
+      {loading && <p role="status">Kartlar yükleniyor...</p>}
+      {error && <p className="form-error" role="alert">{error}</p>}
       <div className="table-container">
         <table className="cards-table">
           <thead>
@@ -101,6 +112,8 @@ function Cards() {
               <th>Kart Adı</th>
               <th>Tür</th>
               <th>Kod</th>
+              {admin && <th>Kart Sahibi</th>}
+              <th>Hedef Bağlantı</th>
               <th>Okutma</th>
               <th>Durum</th>
               <th>İşlem</th>
@@ -112,10 +125,12 @@ function Cards() {
               <NfcCardRow
                 key={card.id}
                 card={card}
+                admin={admin}
                 onDelete={handleDelete}
                 onToggleStatus={handleToggleStatus}
               />
             ))}
+            {!loading && !error && cards.length === 0 && <tr><td colSpan={admin ? 8 : 7}>Henüz {admin ? "kart oluşturulmadı" : "size atanmış bir kart yok"}.</td></tr>}
           </tbody>
         </table>
       </div>

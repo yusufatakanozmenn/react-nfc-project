@@ -23,3 +23,10 @@ export const apiFetch = async (endpoint, options = {}) => {
   }
   return response;
 };
+
+export const apiJson = async (endpoint, options) => {
+  const response = await apiFetch(endpoint, options);
+  const data = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.message || `İşlem gerçekleştirilemedi (${response.status}).`);
+  return data;
+};

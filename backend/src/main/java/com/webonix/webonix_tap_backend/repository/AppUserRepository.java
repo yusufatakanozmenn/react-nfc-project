@@ -11,4 +11,6 @@ public interface AppUserRepository
     Optional<AppUser> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    java.util.List<AppUser> findByRoleOrderByNameAsc(String role);
 }

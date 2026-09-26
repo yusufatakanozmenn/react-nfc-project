@@ -1,10 +1,17 @@
-import { apiFetch } from "../services/api";
+import OwnerSelect from "../components/OwnerSelect";
+import { useAuth } from "../auth/useAuth";
+import { isAdmin } from "../auth/permissions";
+import { apiFetch, apiJson } from "../services/api";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { successToast, errorToast } from "../utils/toast";
 
 function EditCard() {
+  const { user } = useAuth();
+  const admin = isAdmin(user);
+  const [ownerId, setOwnerId] = useState("");
+  const [assigning, setAssigning] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -29,6 +36,7 @@ function EditCard() {
         const card = await response.json();
         if (controller.signal.aborted) return;
 
+        setOwnerId(card.ownerId ?? "");
         setFormData({
           name: card.name,
           type: card.type,
@@ -63,7 +71,7 @@ function EditCard() {
     event.preventDefault();
 
     try {
-      const response = await apiFetch(`/api/cards/${id}`, {
+      await apiJson(`/api/cards/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -71,22 +79,26 @@ function EditCard() {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error("Kart güncellenemedi.");
-      }
-
-      const updatedCard = await response.json();
-
-      console.log("Güncellenen kart:", updatedCard);
-
       successToast("Kart başarıyla güncellendi.");
 
       navigate("/cards");
     } catch (error) {
       console.error("Kart güncelleme hatası:", error);
 
-      errorToast("Kart güncellenirken hata oluştu.");
+      errorToast(error.message);
     }
+  };
+
+  const assignOwner = async () => {
+    if (assigning) return;
+    setAssigning(true);
+    try {
+      await apiJson(`/api/cards/${id}/owner`, {
+        method: "PUT", body: JSON.stringify({ ownerId: ownerId === "" ? null : Number(ownerId) }),
+      });
+      successToast("Kart sahibi güncellendi.");
+    } catch (error) { errorToast(error.message); }
+    finally { setAssigning(false); }
   };
 
   if (loading) {
@@ -154,6 +166,13 @@ function EditCard() {
             Değişiklikleri Kaydet
           </button>
         </form>
+        {admin && <div className="owner-assignment">
+          <h2>Kullanıcıya Ata</h2>
+          <OwnerSelect value={ownerId} onChange={setOwnerId} disabled={assigning} />
+          <button type="button" className="primary-button" onClick={assignOwner} disabled={assigning}>
+            {assigning ? "Kaydediliyor..." : "Kart Sahibini Kaydet"}
+          </button>
+        </div>}
       </div>
     </>
   );

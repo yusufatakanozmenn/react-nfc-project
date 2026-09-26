@@ -53,8 +53,14 @@ public class SecurityConfig {
                         )
                         .permitAll()
 
-                        .anyRequest()
-                        .authenticated()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/cards").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/cards/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/cards/*/owner").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/cards", "/api/cards/*", "/api/statistics", "/api/auth/me").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers(HttpMethod.PUT, "/api/cards/*", "/api/auth/me").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers(HttpMethod.PATCH, "/api/cards/*/status").hasAnyRole("ADMIN", "USER")
+                        .anyRequest().hasRole("ADMIN")
                 )
 
                 .formLogin(form -> form.disable())

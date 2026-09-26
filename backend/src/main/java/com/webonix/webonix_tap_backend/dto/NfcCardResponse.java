@@ -7,6 +7,8 @@ public record NfcCardResponse(
         String code,
         String destinationUrl,
         Integer scans,
-        Boolean active
+        Boolean active,
+        Long ownerId,
+        String ownerName
 ) {
 }
