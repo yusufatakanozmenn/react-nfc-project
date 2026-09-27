@@ -4,6 +4,11 @@ import "butteruptoasts/src/butterup.css";
 const butterup =
   butterupImport?.default ?? butterupImport?.butterup ?? butterupImport;
 
+// The library renders messages as HTML: escape all dynamic text at this boundary.
+const escapeMessage = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+})[char]);
+
 // Butterup 2 uses global options, not per-toast duration/maxToasts.
 butterup.options.toastLife = 3000;
 butterup.options.maxToasts = 3;
@@ -11,7 +16,7 @@ butterup.options.maxToasts = 3;
 export const successToast = (message) => {
   butterup.toast({
     title: "Başarılı",
-    message,
+    message: escapeMessage(message),
     type: "success",
     location: "top-right",
     icon: true,
@@ -22,7 +27,7 @@ export const successToast = (message) => {
 export const errorToast = (message) => {
   butterup.toast({
     title: "Hata",
-    message,
+    message: escapeMessage(message),
     type: "error",
     location: "top-right",
     icon: true,
@@ -33,7 +38,7 @@ export const errorToast = (message) => {
 export const warningToast = (message) => {
   butterup.toast({
     title: "Uyarı",
-    message,
+    message: escapeMessage(message),
     type: "warning",
     location: "top-right",
     icon: true,
@@ -44,7 +49,7 @@ export const warningToast = (message) => {
 export const infoToast = (message) => {
   butterup.toast({
     title: "Bilgi",
-    message,
+    message: escapeMessage(message),
     type: "info",
     location: "top-right",
     icon: true,

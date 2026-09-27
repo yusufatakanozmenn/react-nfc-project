@@ -32,7 +32,9 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository()))
+                .logout(logout -> logout.disable())
+                .headers(headers -> headers.contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'none'; frame-ancestors 'none'")))
 
                 .cors(cors -> {})
 
@@ -44,8 +46,9 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/register").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/r/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/auth/logout", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/r/**").permitAll()
+                        .requestMatchers("/api/auth/register").denyAll()
 
                         .requestMatchers(
                                 HttpMethod.OPTIONS,
@@ -60,7 +63,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/cards", "/api/cards/*", "/api/statistics", "/api/auth/me").hasAnyRole("ADMIN", "USER")
                         .requestMatchers(HttpMethod.PUT, "/api/cards/*", "/api/auth/me").hasAnyRole("ADMIN", "USER")
                         .requestMatchers(HttpMethod.PATCH, "/api/cards/*/status").hasAnyRole("ADMIN", "USER")
-                        .anyRequest().hasRole("ADMIN")
+                        .anyRequest().denyAll()
                 )
 
                 .formLogin(form -> form.disable())
@@ -84,6 +87,24 @@ public class SecurityConfig {
         // Run only inside Spring Security, after its security context has been initialized.
         registration.setEnabled(false);
         return registration;
+    }
+
+    @org.springframework.beans.factory.annotation.Value("${app.cookies.secure:false}")
+    private boolean secureCookies;
+
+    @Bean
+    public org.springframework.security.web.csrf.CookieCsrfTokenRepository csrfTokenRepository() {
+        var repository = new org.springframework.security.web.csrf.CookieCsrfTokenRepository();
+        repository.setCookieName(secureCookies ? "__Host-webonix_csrf" : "webonix_csrf");
+        repository.setCookiePath("/");
+        repository.setCookieCustomizer(cookie -> cookie.httpOnly(true).secure(secureCookies).sameSite("Strict"));
+        return repository;
+    }
+
+    @Bean
+    public org.springframework.security.core.userdetails.UserDetailsService userDetailsService() {
+        // Authentication is handled by AuthService; disable Boot's generated development account.
+        return username -> { throw new org.springframework.security.core.userdetails.UsernameNotFoundException("Unsupported authentication method"); };
     }
 
     @Bean

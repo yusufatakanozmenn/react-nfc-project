@@ -17,23 +17,18 @@ public class AuthService {
 
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final SessionService sessions;
+    private final String dummyHash;
 
     public AuthService(
             AppUserRepository appUserRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService
+            SessionService sessions
     ) {
         this.appUserRepository = appUserRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
-    }
-
-    @org.springframework.transaction.annotation.Transactional
-    public AuthResponse register(RegisterRequest request) {
-        AppUser user = createUser(request);
-        return new AuthResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(),
-                null, "Kullanıcı başarıyla oluşturuldu.");
+        this.sessions = sessions;
+        this.dummyHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -53,10 +48,7 @@ public class AuthService {
                 || !email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçerli bir müşteri adı ve e-posta girin.");
         }
-        if (password == null || password.isBlank() || password.length() < 8
-                || password.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Şifre en az 8 karakter ve en fazla 72 bayt olmalıdır.");
-        }
+        com.webonix.webonix_tap_backend.security.PasswordPolicy.validate(password);
         if (appUserRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Bu e-posta zaten kullanılıyor.");
         }
@@ -73,57 +65,21 @@ public class AuthService {
                 user.getId(), user.getName(), user.getEmail(), user.getActive());
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public AuthResponse login(LoginRequest request) {
-
-    if (request.email() == null || request.email().isBlank()
-            || request.password() == null || request.password().isBlank()) {
-        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email ve şifre gereklidir.");
-    }
-
-    String email = request.email()
-            .trim()
-            .toLowerCase(Locale.ROOT);
-
-    AppUser user = appUserRepository
-            .findByEmail(email)
-            .orElseThrow(() ->
-                    new ResponseStatusException(
-                            HttpStatus.UNAUTHORIZED,
-                            "Email veya şifre hatalı."
-                    )
-            );
-
-    if (!Boolean.TRUE.equals(user.getActive())) {
-        throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Kullanıcı hesabı pasif."
-        );
-    }
-
-    boolean passwordMatches =
-            passwordEncoder.matches(
-                    request.password(),
-                    user.getPassword()
-            );
-
-    if (!passwordMatches) {
-        throw new ResponseStatusException(
-                HttpStatus.UNAUTHORIZED,
-                "Email veya şifre hatalı."
-        );
-    }
-    String token = jwtService.generateToken(
-        user.getId(),
-        user.getRole()
-    );
-   return new AuthResponse(
-        user.getId(),
-        user.getName(),
-        user.getEmail(),
-        user.getRole(),
-        token,
-        "Giriş başarılı."
-    );
+        if (request.email() == null || request.email().isBlank() || request.email().length() > 150
+                || request.password() == null || request.password().isBlank()
+                || request.password().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçerli bir e-posta ve şifre girin.");
+        }
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        AppUser user = appUserRepository.findByEmailForUpdate(email).orElse(null);
+        boolean matches = passwordEncoder.matches(request.password(), user == null ? dummyHash : user.getPassword());
+        if (user == null || !matches || !Boolean.TRUE.equals(user.getActive())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "E-posta veya şifre hatalı.");
+        }
+        String token = sessions.issue(user.getId(), user.getRole(), Boolean.TRUE.equals(request.rememberMe()));
+        return new AuthResponse(user.getId(), user.getName(), user.getEmail(), user.getRole(), token, "Giriş başarılı.");
     }
     public AppUser requireActiveUser(String userId) {
         return appUserRepository.findById(Long.valueOf(userId))
@@ -144,7 +100,7 @@ public class AuthService {
                 || !updatedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçerli bir ad ve e-posta girin.");
         }
-        if (request.currentPassword() == null || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+        if (request.currentPassword() == null || request.currentPassword().getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72 || !passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mevcut şifre hatalı.");
         }
         appUserRepository.findByEmail(updatedEmail).ifPresent(existing -> {

@@ -10,6 +10,10 @@ public class NfcCard {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    @Column(nullable = false)
+    private long version;
+
     private String name;
 
     private String type;

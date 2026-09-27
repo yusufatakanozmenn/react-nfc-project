@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { errorToast } from "../utils/toast";
 import { logout } from "../auth/session";
 import { NavLink } from "react-router-dom";
 
@@ -6,6 +8,13 @@ import { isAdmin } from "../auth/permissions";
 
 function Sidebar() {
   const { user } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try { await logout(); }
+    catch { errorToast("Çıkış tamamlanamadı. Bağlantınızı kontrol edip tekrar deneyin."); }
+    finally { setLoggingOut(false); }
+  };
   const admin = isAdmin(user);
   return (
     <aside className="sidebar">
@@ -30,7 +39,7 @@ function Sidebar() {
           </li>
         </ul>
       </nav>
-      <button className="sidebar-logout" onClick={logout}>Çıkış Yap</button>
+      <button className="sidebar-logout" onClick={handleLogout} disabled={loggingOut}>{loggingOut ? "Çıkış yapılıyor…" : "Çıkış Yap"}</button>
     </aside>
   );
 }

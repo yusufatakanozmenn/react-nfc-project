@@ -6,6 +6,11 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.OptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, String>> concurrentUpdate() {
+        return ResponseEntity.status(409).body(Map.of("message", "Kart başka bir işlemde değiştirildi. Sayfayı yenileyip tekrar deneyin."));
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> handle(ResponseStatusException exception) {
         return ResponseEntity.status(exception.getStatusCode())

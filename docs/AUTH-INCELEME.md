@@ -1,3 +1,5 @@
+> Tarihsel inceleme: LocalStorage/Bearer ve 24 saatlik oturum açıklamaları artık geçerli değildir. Güncel durum: [Güvenlik notları](GUVENLIK.md).
+
 # Proje devri ve login düzeltmesi — 26 Eylül 2026
 
 Bu belge ilk devir çalışmasının kaydıdır. Daha sonra eklenen roller, kart sahipliği, gerçek toplam istatistikler ve profil ayarları için [güncel geliştirme notlarına](ROLLER-VE-SAHIPLIK.md) bakın.

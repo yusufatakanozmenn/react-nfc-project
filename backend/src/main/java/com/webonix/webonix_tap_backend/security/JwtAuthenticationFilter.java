@@ -20,22 +20,25 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AppUserRepository users;
+    private final com.webonix.webonix_tap_backend.service.SessionService sessions;
+    private final AuthCookies cookies;
 
-    public JwtAuthenticationFilter(JwtService jwtService, AppUserRepository users) {
+    public JwtAuthenticationFilter(JwtService jwtService, AppUserRepository users, com.webonix.webonix_tap_backend.service.SessionService sessions, AuthCookies cookies) {
         this.jwtService = jwtService;
-        this.users = users;
+        this.users = users; this.sessions = sessions; this.cookies = cookies;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
-        String authorization = request.getHeader("Authorization");
-        if (authorization != null && authorization.startsWith("Bearer ")
+        String token = cookies.read(request);
+        if (token != null
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 // Parse once: signature and expiration are verified together.
-                var claims = jwtService.getClaims(authorization.substring(7));
-                if (claims.getSubject() != null && claims.getExpiration() != null) {
+                var claims = jwtService.getClaims(token);
+                if (claims.getSubject() != null && claims.getExpiration() != null && claims.getId() != null
+                        && sessions.isActive(token, Long.parseLong(claims.getSubject()))) {
                     users.findById(Long.parseLong(claims.getSubject()))
                             .filter(user -> Boolean.TRUE.equals(user.getActive()))
                             .ifPresent(user -> {

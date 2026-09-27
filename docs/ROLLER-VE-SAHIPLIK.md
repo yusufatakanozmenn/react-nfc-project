@@ -1,5 +1,7 @@
 # Roller, kart sahipliği ve hesap ayarları
 
+> Bu dosya önceki geliştirmelerin kaydını da içerir. Güncel oturum, şema ve kayıt politikası için [Güvenlik notları](GUVENLIK.md) geçerlidir.
+
 ## Yetki tablosu
 
 | İşlem | ADMIN | USER |
@@ -16,7 +18,7 @@ USER menüsünde yalnızca Kartlarım, İstatistikler, Ayarlar ve Çıkış vard
 
 ## Veri modeli ve mevcut kayıtlar
 
-`nfc_cards.owner_id` nullable bir foreign key olarak `app_users.id` alanına bağlanır; indekslidir. Mevcut geliştirme `ddl-auto=update` ayarı bu ek alanı veriyi silmeden oluşturur. Atanmamış kartları yalnızca ADMIN görür. Yeni kart oluştururken ya da kartın Düzenle → Kullanıcıya Ata bölümünde aktif bir hesap seçilebilir. Sahip değiştirilince önceki kullanıcı sonraki isteğinde karta ve o kartın istatistiklerine erişemez.
+`nfc_cards.owner_id` nullable bir foreign key olarak `app_users.id` alanına bağlanır; indekslidir. Sahiplik alanı mevcut veriye uygulanmıştır. Güncel ayar `ddl-auto=validate`; yeni geçişler ayrı migration hesabıyla uygulanır. Atanmamış kartları yalnızca ADMIN görür. Yeni kart oluştururken ya da kartın Düzenle → Kullanıcıya Ata bölümünde aktif bir hesap seçilebilir. Sahip değiştirilince önceki kullanıcı sonraki isteğinde karta ve o kartın istatistiklerine erişemez.
 
 Kullanıcının açık onayıyla mevcut ID 1 (Yusuf Atakan) hesabının rolü ADMIN yapıldı. Mevcut bir kart korunarak atanmamış bırakıldı. Başka hesap oluşturulmadı; kart sahipliği tahminen atanmadı.
 
@@ -55,7 +57,7 @@ Tarayıcı testleri gerçek müşteri şifresini kullanmadı. Canlı veritabanı
 - `src/pages/Customers.jsx`: müşteri oluşturma, müşteri listesi/kart sayısı, seçili müşterinin kartları ve aynı ekrandan atanmamış kart bağlama. Şifre tekrarı, kaydetme/yüklenme/hata durumları ve başarılı kayıtta şifre alanlarını temizleme.
 - `App.jsx`, `Sidebar.jsx`, `App.css`: admin'e özel `/customers` route'u, Müşteriler menüsü ve responsive form/liste yerleşimi.
 - `NewCard.jsx`: müşteri ekranından gelen `ownerId` parametresiyle kart sahibini önceden seçme; backend sahibi ayrıca doğrular.
-- `AdminUserController`, `AuthService`, `AppUserRepository`: `GET/POST /api/admin/customers`, sadece USER hesaplarının listelenmesi, yeni aktif USER kaydı, BCrypt, ad/e-posta/şifre doğrulaması ve tekrarlanan e-postada `409`. Ortak kayıt yordamı public register için de aynı doğrulamayı uygular; public register yetki politikası değiştirilmedi. Müşteri oluşturma yanıtı token veya parola içermez.
+- `AdminUserController`, `AuthService`, `AppUserRepository`: `GET/POST /api/admin/customers`, sadece USER hesaplarının listelenmesi, yeni aktif USER kaydı, BCrypt, ad/e-posta/şifre doğrulaması ve tekrarlanan e-postada `409`. Müşteri oluşturma yalnızca admin üzerinden yapılır; public register güvenlik çalışmasıyla kapatılmıştır. Müşteri oluşturma yanıtı token veya parola içermez.
 - Yeni veritabanı tablosu/kolonu gerekmedi. Mevcut kullanıcı ve kart sahipliği modeli kullanıldı.
 - Backend testleri 34'e çıktı (7 yeni senaryo); frontend mevcut 18 test, lint ve build başarılı. Yeni senaryolar: admin kısıtı, müşteri listesinin kapsamı, sabit USER rolü, BCrypt saklama, e-posta çakışması ve yarış durumu, geçersiz alanlar, yeni müşteri login → admin kart atama → yalnızca kendi kart/istatistiklerine erişim.
 - Tarayıcıda ayrı test API'siyle müşteri oluşturma, admin oturumunun korunması, aynı ekrandan kart bağlama, müşteri seçili yeni kart formu ve yeni müşterinin yalnızca atanmış kartı görmesi doğrulandı. Canlı backend'de müşteri listesi GET ile kontrol edildi. Gerçek veritabanına örnek müşteri eklenmedi veya kart sahipliği değiştirilmedi.

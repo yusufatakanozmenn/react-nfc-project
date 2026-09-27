@@ -104,8 +104,8 @@ export default function Customers() {
               <input id="customer-email" name="email" type="email" value={form.email} onChange={change} maxLength={150} autoComplete="off" required />
             </div>
             <div className="form-group"><label htmlFor="customer-password">Giriş şifresi</label>
-              <input id="customer-password" name="password" type="password" value={form.password} onChange={change} minLength={8} maxLength={72} autoComplete="new-password" required />
-              <p className="field-hint">En az 8 karakter. Şifre kayıt sonrasında gösterilmez.</p>
+              <input id="customer-password" name="password" type="password" value={form.password} onChange={change} minLength={15} maxLength={72} autoComplete="new-password" required />
+              <p className="field-hint">En az 15 karakter. Şifre kayıt sonrasında gösterilmez.</p>
             </div>
             <div className="form-group"><label htmlFor="customer-confirm">Şifre tekrarı</label>
               <input id="customer-confirm" name="confirmPassword" type="password" value={form.confirmPassword} onChange={change} autoComplete="new-password" required />

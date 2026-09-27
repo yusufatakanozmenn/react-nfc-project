@@ -1,0 +1,41 @@
+# Replace example.com, certificate paths and /srv/webonix/dist before enabling.
+# Build frontend with: VITE_API_URL= npm run build (same-origin API).
+limit_req_zone $binary_remote_addr zone=webonix_login:10m rate=5r/m;
+server {
+    listen 80;
+    server_name example.com;
+    return 301 https://example.com$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name example.com;
+    ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+    client_max_body_size 16k;
+    root /srv/webonix/dist;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    location = /api/auth/login {
+        limit_req zone=webonix_login burst=5 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+    location /api/ {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_hide_header Content-Security-Policy;
+    }
+    location / { try_files $uri $uri/ /index.html; }
+    location ~ /\. { deny all; }
+}

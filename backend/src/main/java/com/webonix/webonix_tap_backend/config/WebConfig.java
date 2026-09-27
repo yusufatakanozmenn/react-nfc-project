@@ -22,6 +22,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "DELETE",
                         "OPTIONS"
                 )
-                .allowedHeaders("*");
+                .allowCredentials(true)
+                .allowedHeaders("Content-Type", "X-XSRF-TOKEN");
     }
 }

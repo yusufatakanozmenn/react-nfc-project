@@ -40,8 +40,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // Real controllers, BCrypt, JWT and security chain; repositories are mocked, so no MySQL writes.
 @WebMvcTest({AuthController.class, NfcCardController.class})
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@Import({SecurityConfig.class, WebConfig.class, JwtAuthenticationFilter.class, JwtService.class, AuthService.class})
-class WebonixTapBackendApplicationTests {
+@Import({com.webonix.webonix_tap_backend.service.SessionService.class, com.webonix.webonix_tap_backend.security.AuthCookies.class, SecurityConfig.class, WebConfig.class, JwtAuthenticationFilter.class, JwtService.class, AuthService.class})
+class WebonixTapBackendApplicationTests extends SecurityTestSupport {
     private static final String SECRET = UUID.randomUUID().toString().repeat(2);
     private static final String EMAIL = "auth-test@example.test";
     private static final String PASSWORD = UUID.randomUUID().toString();
@@ -67,91 +67,93 @@ class WebonixTapBackendApplicationTests {
         when(cards.getAllCards("1")).thenReturn(List.of());
     }
 
-    private String bearer() { return "Bearer " + jwt.generateToken(1L, "USER"); }
+    private String bearer() { return "Bearer " + sessions.issue(1L, "USER"); }
 
     @Test void successfulLoginThenMeAndProtectedCards() throws Exception {
         String request = mapper.writeValueAsString(java.util.Map.of("email", EMAIL.toUpperCase(), "password", PASSWORD));
-        String body = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(request))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.token").isString())
-                .andReturn().getResponse().getContentAsString();
-        String token = mapper.readTree(body).get("token").asString();
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+        var response = mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.token").doesNotExist())
+                .andReturn().getResponse();
+        String token = response.getCookie("webonix_session").getValue();
+        org.junit.jupiter.api.Assertions.assertTrue(response.getCookie("webonix_session").isHttpOnly());
+        org.junit.jupiter.api.Assertions.assertTrue(response.getHeader("Set-Cookie").contains("SameSite=Strict"));
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer " + token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Database Name"))
                 .andExpect(jsonPath("$.password").doesNotExist()).andExpect(jsonPath("$.token").doesNotExist());
-        mvc.perform(get("/api/cards").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        mvc.perform(get("/api/cards").cookie(cookie("Bearer " + token))).andExpect(status().isOk());
     }
 
     @Test void missingTokenIsUnauthorized() throws Exception {
         mvc.perform(get("/api/auth/me")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/cards")).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/cards")).andExpect(status().isUnauthorized());
-        mvc.perform(put("/api/cards/1")).andExpect(status().isUnauthorized());
-        mvc.perform(patch("/api/cards/1/status")).andExpect(status().isUnauthorized());
-        mvc.perform(delete("/api/cards/1")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/cards").with(csrf())).andExpect(status().isUnauthorized());
+        mvc.perform(put("/api/cards/1").with(csrf())).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/cards/1/status").with(csrf())).andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/cards/1").with(csrf())).andExpect(status().isUnauthorized());
     }
 
     @Test void malformedTokenIsUnauthorized() throws Exception {
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer invalid"))
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer invalid")))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void expiredTokenIsUnauthorized() throws Exception {
         String token = Jwts.builder().subject("1").expiration(new Date(System.currentTimeMillis() - 10000))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer " + token)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void differentSigningKeyIsUnauthorized() throws Exception {
         var other = new JwtService(UUID.randomUUID().toString().repeat(2));
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + other.generateToken(1L, "ADMIN")))
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer " + other.generateToken(1L, "ADMIN"))))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void tokenWithoutExpirationIsUnauthorized() throws Exception {
         String token = Jwts.builder().subject("1")
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + token))
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer " + token)))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void disabledUserCannotUsePreviouslyIssuedToken() throws Exception {
         String token = bearer();
         user.setActive(false);
-        mvc.perform(get("/api/auth/me").header("Authorization", token)).andExpect(status().isUnauthorized());
-        mvc.perform(get("/api/cards").header("Authorization", token)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").cookie(cookie(token))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/cards").cookie(cookie(token))).andExpect(status().isUnauthorized());
     }
 
     @Test void deletedUserCannotUsePreviouslyIssuedToken() throws Exception {
         String token = bearer();
         when(users.findById(1L)).thenReturn(Optional.empty());
-        mvc.perform(get("/api/auth/me").header("Authorization", token)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").cookie(cookie(token))).andExpect(status().isUnauthorized());
     }
 
     @Test void currentIdentityComesFromDatabase() throws Exception {
         String token = bearer();
         user.setName("Updated Name");
         user.setRole("ADMIN");
-        mvc.perform(get("/api/auth/me").header("Authorization", token))
+        mvc.perform(get("/api/auth/me").cookie(cookie(token)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Updated Name"))
                 .andExpect(jsonPath("$.role").value("ADMIN"));
     }
 
     @Test void wrongPasswordIsUnauthorized() throws Exception {
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+        mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + EMAIL + "\",\"password\":\"wrong\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test void missingLoginFieldsAreBadRequest() throws Exception {
-        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest());
     }
 
     @Test void corsAllowsFrontendWithAuthorization() throws Exception {
         mvc.perform(options("/api/auth/me").header("Origin", "http://localhost:5173")
                         .header("Access-Control-Request-Method", "GET")
-                        .header("Access-Control-Request-Headers", "authorization"))
+                        .header("Access-Control-Request-Headers", "x-xsrf-token"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
     }
@@ -164,5 +166,79 @@ class WebonixTapBackendApplicationTests {
 
     @Test void unknownPublicRedirectIs404RatherThanAuthenticationError() throws Exception {
         mvc.perform(get("/r/not-implemented")).andExpect(status().isNotFound());
+    }
+
+    @Test void loginLogoutAndWritesRejectMissingCsrf() throws Exception {
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        String token = bearer();
+        mvc.perform(post("/api/auth/logout").cookie(cookie(token))).andExpect(status().isForbidden());
+        mvc.perform(put("/api/auth/me").cookie(cookie(token)).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/auth/me").cookie(cookie(token))).andExpect(status().isOk());
+    }
+    @Test void forgedCsrfAndForeignOriginAreRejected() throws Exception {
+        mvc.perform(post("/api/auth/logout").cookie(cookie(bearer())).with(csrf()).header("Origin", "https://evil.example"))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/auth/logout").cookie(cookie(bearer()), new jakarta.servlet.http.Cookie("webonix_csrf", "one"))
+                .header("X-XSRF-TOKEN", "two")).andExpect(status().isForbidden());
+    }
+    @Test void logoutRevokesCopiedCookieAndIsIdempotent() throws Exception {
+        String token = bearer();
+        mvc.perform(post("/api/auth/logout").cookie(cookie(token)).with(csrf()))
+                .andExpect(status().isNoContent()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie().maxAge("webonix_session", 0));
+        mvc.perform(get("/api/auth/me").cookie(cookie(token))).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/logout").cookie(cookie(token)).with(csrf())).andExpect(status().isNoContent());
+    }
+    @Test void signedButUnregisteredTokenAndLegacyBearerAreRejected() throws Exception {
+        mvc.perform(get("/api/auth/me").cookie(cookie(jwt.generateToken(1L, "USER")))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").header("Authorization", bearer())).andExpect(status().isUnauthorized());
+    }
+    @Test void publicRegistrationIsClosedForGuestUserAndAdmin() throws Exception {
+        mvc.perform(post("/api/auth/register").with(csrf()).contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/register").with(csrf()).cookie(cookie(bearer()))).andExpect(status().isForbidden());
+        user.setRole("ADMIN");
+        mvc.perform(post("/api/auth/register").with(csrf()).cookie(cookie(bearer()))).andExpect(status().isForbidden());
+    }
+    @Test void repeatedLoginReplacesExistingSession() throws Exception {
+        String old = bearer();
+        var result = mvc.perform(post("/api/auth/login").with(csrf()).cookie(cookie(old))
+                .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(java.util.Map.of("email", EMAIL, "password", PASSWORD))))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        mvc.perform(get("/api/auth/me").cookie(cookie(old))).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").cookie(result.getCookie("webonix_session"))).andExpect(status().isOk());
+    }
+    @Test void limiterReturns429AndRetryAfterBeforePasswordLookup() throws Exception {
+        when(limiter.retryAfter(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString())).thenReturn(120L);
+        mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(java.util.Map.of("email", EMAIL, "password", PASSWORD))))
+                .andExpect(status().isTooManyRequests()).andExpect(header().string("Retry-After", "120"));
+        org.mockito.Mockito.verify(users, org.mockito.Mockito.never()).findByEmail(org.mockito.ArgumentMatchers.anyString());
+    }
+    @Test void disabledUnknownAndWrongPasswordHaveSamePublicError() throws Exception {
+        String wrong = mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(java.util.Map.of("email", EMAIL, "password", "wrong"))))
+                .andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        user.setActive(false);
+        String disabled = mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(java.util.Map.of("email", EMAIL, "password", PASSWORD))))
+                .andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        String unknown = mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                .content(mapper.writeValueAsString(java.util.Map.of("email", "missing@example.test", "password", PASSWORD))))
+                .andExpect(status().isUnauthorized()).andReturn().getResponse().getContentAsString();
+        org.junit.jupiter.api.Assertions.assertEquals(wrong, disabled);
+        org.junit.jupiter.api.Assertions.assertEquals(wrong, unknown);
+    }
+    @Test void csrfResponseIsNotCacheableAndCookieIsHttpOnly() throws Exception {
+        mvc.perform(get("/api/auth/csrf")).andExpect(status().isOk()).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie().httpOnly("webonix_csrf", true))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"));
+    }
+    @Test void csrfTokenWithoutItsCookieCannotAuthorizeMutation() throws Exception {
+        var result = mvc.perform(get("/api/auth/csrf")).andReturn().getResponse();
+        String csrf = mapper.readTree(result.getContentAsString()).get("token").asString();
+        mvc.perform(post("/api/auth/logout").header("X-XSRF-TOKEN", csrf).cookie(cookie(bearer())))
+                .andExpect(status().isForbidden());
     }
 }

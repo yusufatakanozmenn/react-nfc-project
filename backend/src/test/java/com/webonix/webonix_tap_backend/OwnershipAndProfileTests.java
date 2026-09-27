@@ -29,8 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest({AuthController.class, NfcCardController.class, StatisticsController.class, AdminUserController.class})
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
-@Import({SecurityConfig.class, WebConfig.class, JwtAuthenticationFilter.class, JwtService.class, AuthService.class, NfcCardService.class})
-class OwnershipAndProfileTests {
+@Import({com.webonix.webonix_tap_backend.service.SessionService.class, com.webonix.webonix_tap_backend.security.AuthCookies.class, SecurityConfig.class, WebConfig.class, JwtAuthenticationFilter.class, JwtService.class, AuthService.class, NfcCardService.class})
+class OwnershipAndProfileTests extends SecurityTestSupport {
     private static final String SECRET = UUID.randomUUID().toString().repeat(2);
     private static final String PASSWORD = UUID.randomUUID().toString();
     @Autowired MockMvc mvc;
@@ -51,14 +51,14 @@ class OwnershipAndProfileTests {
         var card = new NfcCard("Card " + id, "website", "CODE" + id, "https://example.test", scans, active);
         ReflectionTestUtils.setField(card, "id", id); card.setOwner(owner); return card;
     }
-    String token(long id) { return "Bearer " + jwt.generateToken(id, id == 3 ? "ADMIN" : "USER"); }
+    String token(long id) { return "Bearer " + sessions.issue(id, id == 3 ? "ADMIN" : "USER"); }
     String json(Object value) { return mapper.writeValueAsString(value); }
     Map<String, Object> cardBody() { return new HashMap<>(Map.of("name", "Updated", "type", "website", "destinationUrl", "https://changed.test")); }
     Map<String, Object> profile(String email) { return new HashMap<>(Map.of("name", "New Name", "email", email, "currentPassword", PASSWORD)); }
     ResultActions putJson(String path, long actor, Object body) throws Exception {
-        return mvc.perform(put(path).header("Authorization", token(actor)).contentType(MediaType.APPLICATION_JSON).content(json(body)));
+        return mvc.perform(put(path).with(csrf()).cookie(cookie(token(actor))).contentType(MediaType.APPLICATION_JSON).content(json(body)));
     }
-    ResultActions getAs(String path, long actor) throws Exception { return mvc.perform(get(path).header("Authorization", token(actor))); }
+    ResultActions getAs(String path, long actor) throws Exception { return mvc.perform(get(path).cookie(cookie(token(actor)))); }
 
     @BeforeEach void setup() {
         user = account(1, "USER"); other = account(2, "USER"); admin = account(3, "ADMIN");
@@ -99,7 +99,7 @@ class OwnershipAndProfileTests {
         for (long id : new long[]{102, 103, 999}) {
             getAs("/api/cards/" + id, 1).andExpect(status().isNotFound());
             putJson("/api/cards/" + id, 1, cardBody()).andExpect(status().isNotFound());
-            mvc.perform(patch("/api/cards/" + id + "/status").header("Authorization", token(1))).andExpect(status().isNotFound());
+            mvc.perform(patch("/api/cards/" + id + "/status").with(csrf()).cookie(cookie(token(1)))).andExpect(status().isNotFound());
         }
         verify(cards, never()).save(any());
     }
@@ -107,13 +107,13 @@ class OwnershipAndProfileTests {
         var body = cardBody(); body.put("ownerId", 2); body.put("code", "FORGED");
         putJson("/api/cards/101", 1, body).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("Updated"))
                 .andExpect(jsonPath("$.ownerId").value(1)).andExpect(jsonPath("$.code").value("CODE101"));
-        mvc.perform(patch("/api/cards/101/status").header("Authorization", token(1)))
+        mvc.perform(patch("/api/cards/101/status").with(csrf()).cookie(cookie(token(1))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.active").value(false));
     }
     @Test void userCannotCreateDeleteAssignOrListAccounts() throws Exception {
-        mvc.perform(post("/api/cards").header("Authorization", token(1)).contentType(MediaType.APPLICATION_JSON).content(json(cardBody())))
+        mvc.perform(post("/api/cards").with(csrf()).cookie(cookie(token(1))).contentType(MediaType.APPLICATION_JSON).content(json(cardBody())))
                 .andExpect(status().isForbidden());
-        mvc.perform(delete("/api/cards/101").header("Authorization", token(1))).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/cards/101").with(csrf()).cookie(cookie(token(1)))).andExpect(status().isForbidden());
         putJson("/api/cards/101/owner", 1, Map.of("ownerId", 2)).andExpect(status().isForbidden());
         getAs("/api/admin/users", 1).andExpect(status().isForbidden());
     }
@@ -133,11 +133,11 @@ class OwnershipAndProfileTests {
     }
     @Test void adminCanCreateEditToggleAndDeleteAnyCard() throws Exception {
         var body = cardBody(); body.put("ownerId", 2);
-        mvc.perform(post("/api/cards").header("Authorization", token(3)).contentType(MediaType.APPLICATION_JSON).content(json(body)))
+        mvc.perform(post("/api/cards").with(csrf()).cookie(cookie(token(3))).contentType(MediaType.APPLICATION_JSON).content(json(body)))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.ownerId").value(2));
         putJson("/api/cards/102", 3, cardBody()).andExpect(status().isOk());
-        mvc.perform(patch("/api/cards/102/status").header("Authorization", token(3))).andExpect(status().isOk());
-        mvc.perform(delete("/api/cards/102").header("Authorization", token(3))).andExpect(status().isNoContent());
+        mvc.perform(patch("/api/cards/102/status").with(csrf()).cookie(cookie(token(3)))).andExpect(status().isOk());
+        mvc.perform(delete("/api/cards/102").with(csrf()).cookie(cookie(token(3)))).andExpect(status().isNoContent());
         verify(cards).delete(otherCard);
     }
     @Test void missingAndInactiveOwnersAreRejected() throws Exception {
@@ -155,7 +155,7 @@ class OwnershipAndProfileTests {
         String before = token(1);
         putJson("/api/auth/me", 1, body).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.email").value("new@example.test")).andExpect(jsonPath("$.role").value("USER"));
-        mvc.perform(get("/api/auth/me").header("Authorization", before)).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("New Name"));
+        mvc.perform(get("/api/auth/me").cookie(cookie(before))).andExpect(status().isOk()).andExpect(jsonPath("$.name").value("New Name"));
         getAs("/api/admin/users", 1).andExpect(status().isForbidden());
         org.junit.jupiter.api.Assertions.assertEquals("user2@example.test", other.getEmail());
         org.junit.jupiter.api.Assertions.assertTrue(user.getActive());
@@ -168,19 +168,19 @@ class OwnershipAndProfileTests {
         verify(users, never()).saveAndFlush(any());
     }
     @Test void tokenRoleCannotOverrideCurrentDatabaseRole() throws Exception {
-        mvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + jwt.generateToken(1L, "ADMIN"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/admin/users").cookie(cookie("Bearer " + sessions.issue(1L, "ADMIN")))).andExpect(status().isForbidden());
     }
     @Test void legacyEmailSubjectIsRejected() throws Exception {
         String legacy = Jwts.builder().subject(user.getEmail()).expiration(new Date(System.currentTimeMillis() + 60000))
                 .signWith(Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8))).compact();
-        mvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + legacy)).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/auth/me").cookie(cookie("Bearer " + legacy))).andExpect(status().isUnauthorized());
     }
 
     Map<String, Object> customerBody() {
         return new HashMap<>(Map.of("name", "  Yeni Müşteri  ", "email", "  CUSTOMER@example.test  ", "password", PASSWORD));
     }
     ResultActions createCustomerAs(long actor, Object body) throws Exception {
-        return mvc.perform(post("/api/admin/customers").header("Authorization", token(actor))
+        return mvc.perform(post("/api/admin/customers").with(csrf()).cookie(cookie(token(actor)))
                 .contentType(MediaType.APPLICATION_JSON).content(json(body)));
     }
 
@@ -194,7 +194,7 @@ class OwnershipAndProfileTests {
         getAs("/api/admin/customers", 1).andExpect(status().isForbidden());
         createCustomerAs(1, customerBody()).andExpect(status().isForbidden());
         mvc.perform(get("/api/admin/customers")).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/admin/customers").contentType(MediaType.APPLICATION_JSON).content(json(customerBody())))
+        mvc.perform(post("/api/admin/customers").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(customerBody())))
                 .andExpect(status().isUnauthorized());
         verify(users, never()).saveAndFlush(any());
     }
@@ -216,15 +216,15 @@ class OwnershipAndProfileTests {
         createCustomerAs(3, customerBody()).andExpect(status().isCreated());
         getAs("/api/admin/users", 3).andExpect(status().isOk()).andExpect(jsonPath("$[3].id").value(4));
         var loginBody = Map.of("email", "customer@example.test", "password", PASSWORD);
-        String result = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON).content(json(loginBody)))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        String customerToken = "Bearer " + mapper.readTree(result).get("token").asString();
-        mvc.perform(get("/api/cards").header("Authorization", customerToken)).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+        var result = mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON).content(json(loginBody)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String customerToken = result.getCookie("webonix_session").getValue();
+        mvc.perform(get("/api/cards").cookie(cookie(customerToken))).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
         putJson("/api/cards/103/owner", 3, Map.of("ownerId", 4)).andExpect(status().isOk());
-        mvc.perform(get("/api/cards").header("Authorization", customerToken)).andExpect(status().isOk())
+        mvc.perform(get("/api/cards").cookie(cookie(customerToken))).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].id").value(103));
-        mvc.perform(get("/api/statistics").header("Authorization", customerToken)).andExpect(status().isOk()).andExpect(jsonPath("$.totalScans").value(7));
-        mvc.perform(get("/api/admin/customers").header("Authorization", customerToken)).andExpect(status().isForbidden());
+        mvc.perform(get("/api/statistics").cookie(cookie(customerToken))).andExpect(status().isOk()).andExpect(jsonPath("$.totalScans").value(7));
+        mvc.perform(get("/api/admin/customers").cookie(cookie(customerToken))).andExpect(status().isForbidden());
     }
 
     @Test void duplicateCustomerEmailIsConflictIncludingCaseAndSpaces() throws Exception {

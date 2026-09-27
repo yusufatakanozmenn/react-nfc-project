@@ -13,7 +13,7 @@ import java.util.Date;
 public class JwtService {
 
     private final SecretKey signingKey;
-    private static final long EXPIRATION_TIME = 1000L * 60 * 60 * 24;
+
 
     public JwtService(@org.springframework.beans.factory.annotation.Value("${app.jwt.secret}") String secret) {
         // Keys validates the minimum HMAC key length; there is no shared fallback secret.
@@ -24,12 +24,17 @@ public class JwtService {
             Long userId,
             String role
     ) {
+        return generateToken(userId, role, false);
+    }
+
+    public String generateToken(Long userId, String role, boolean rememberMe) {
         Date now = new Date();
 
         Date expiration =
-                new Date(now.getTime() + EXPIRATION_TIME);
+                new Date(now.getTime() + com.webonix.webonix_tap_backend.security.SessionPolicy.lifetime(rememberMe).toMillis());
 
         return Jwts.builder()
+                .id(java.util.UUID.randomUUID().toString())
                 .subject(userId.toString())
                 .claim("role", role)
                 .issuedAt(now)

@@ -1,29 +1,39 @@
-import { apiFetch, setUnauthorizedHandler } from "../services/api.js";
+import { apiFetch, apiJson, advanceSession, setUnauthorizedHandler } from "../services/api.js";
 
 let state = { status: "checking", user: null };
 let revision = 0;
+let authQueue = Promise.resolve();
 const listeners = new Set();
+const nextRevision = () => { advanceSession(); return ++revision; };
 const publish = (status, user = null) => {
   state = { status, user };
   listeners.forEach((listener) => listener());
+};
+const clearLegacyStorage = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
+const notifyTabs = () => {
+  // This is only an event marker, never identity or credentials.
+  localStorage.setItem("auth:event", crypto.randomUUID());
+};
+const enqueue = (operation) => {
+  const result = authQueue.then(operation);
+  authQueue = result.catch(() => {});
+  return result;
 };
 export const getSession = () => state;
 export const subscribe = (listener) => {
   listeners.add(listener);
   return () => listeners.delete(listener);
 };
-
-export const logout = () => {
-  revision++;
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  publish("guest");
+const unauthorized = () => {
+  nextRevision(); clearLegacyStorage(); publish("guest");
 };
-setUnauthorizedHandler(logout);
+setUnauthorizedHandler(unauthorized);
 
-const currentUser = async (token) => {
-  // Validation requests are handled here, independently of requests in old pages.
-  const response = await apiFetch("/api/auth/me", { auth: false, headers: { Authorization: `Bearer ${token}` } });
+const currentUser = async () => {
+  const response = await apiFetch("/api/auth/me", { auth: false });
   if (!response.ok) {
     const error = new Error(response.status === 401
       ? "Oturum geçersiz. Lütfen tekrar giriş yapın."
@@ -35,64 +45,59 @@ const currentUser = async (token) => {
 };
 
 export const restoreSession = async () => {
-  const attempt = ++revision;
-  const token = localStorage.getItem("token");
-  if (!token) {
-    localStorage.removeItem("user");
-    publish("guest");
-    return;
-  }
+  const attempt = nextRevision();
+  clearLegacyStorage();
   publish("checking");
+  await authQueue;
+  if (attempt !== revision) return;
   try {
-    const user = await currentUser(token);
-    if (attempt !== revision) return;
-    localStorage.setItem("user", JSON.stringify(user));
-    publish("authenticated", user);
+    const user = await currentUser();
+    if (attempt === revision) publish("authenticated", user);
   } catch (error) {
-    if (attempt !== revision) return;
-    if (error.status === 401) logout();
-    else publish("error");
+    if (attempt === revision) publish(error.status === 401 ? "guest" : "error");
   }
 };
 
-export const login = async (credentials) => {
-  const attempt = ++revision;
-  const response = await apiFetch("/api/auth/login", {
-    method: "POST", auth: false, body: JSON.stringify(credentials),
+export const login = (credentials) => {
+  const attempt = nextRevision();
+  return enqueue(async () => {
+    const response = await apiFetch("/api/auth/login", {
+      method: "POST", auth: false, body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+      throw new Error(response.status === 401 ? "E-posta veya şifre hatalı."
+        : response.status === 429 ? "Çok fazla giriş denemesi. Lütfen daha sonra tekrar deneyin."
+          : "Giriş işlemi başarısız oldu. Lütfen tekrar deneyin.");
+    }
+    const user = await currentUser();
+    if (attempt !== revision) throw new Error("Giriş işlemi iptal edildi. Lütfen tekrar deneyin.");
+    clearLegacyStorage(); publish("authenticated", user); notifyTabs();
   });
-  if (!response.ok) {
-    throw new Error(response.status === 401 ? "E-posta veya şifre hatalı." : "Giriş işlemi başarısız oldu. Lütfen tekrar deneyin.");
-  }
-  const data = await response.json();
-  if (!data.token) throw new Error("Sunucu oturum bilgisi döndürmedi.");
-  const user = await currentUser(data.token);
-  if (attempt !== revision) throw new Error("Giriş işlemi iptal edildi. Lütfen tekrar deneyin.");
-  localStorage.setItem("token", data.token);
-  localStorage.setItem("user", JSON.stringify(user));
-  publish("authenticated", user);
+};
+
+export const logout = () => {
+  const attempt = nextRevision();
+  return enqueue(async () => {
+    // A failed network request must not pretend the server session was revoked.
+    await apiJson("/api/auth/logout", { method: "POST", auth: false });
+    if (attempt !== revision) return;
+    clearLegacyStorage(); publish("guest"); notifyTabs();
+  });
 };
 
 export const initializeAuth = () => {
   void restoreSession();
   const onStorage = (event) => {
-    if (event.key === "token" || event.key === null) void restoreSession();
+    if (event.key === "auth:event" || event.key === null) void restoreSession();
   };
   window.addEventListener("storage", onStorage);
-  return () => {
-    revision++;
-    window.removeEventListener("storage", onStorage);
-  };
+  return () => { nextRevision(); window.removeEventListener("storage", onStorage); };
 };
 
 export const updateProfile = async (profile) => {
   const attempt = revision;
-  const token = localStorage.getItem("token");
-  if (state.status !== "authenticated" || !token) throw new Error("Lütfen tekrar giriş yapın.");
-  const response = await apiFetch("/api/auth/me", { method: "PUT", body: JSON.stringify(profile) });
-  const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.message || "Bilgiler güncellenemedi.");
-  if (attempt !== revision || token !== localStorage.getItem("token")) throw new Error("Oturum değişti. Lütfen tekrar giriş yapın.");
-  localStorage.setItem("user", JSON.stringify(data));
-  publish("authenticated", data);
-  return data;
+  if (state.status !== "authenticated") throw new Error("Lütfen tekrar giriş yapın.");
+  const data = await apiJson("/api/auth/me", { method: "PUT", body: JSON.stringify(profile) });
+  if (attempt !== revision) throw new Error("Oturum değişti. Lütfen tekrar giriş yapın.");
+  publish("authenticated", data); notifyTabs(); return data;
 };
