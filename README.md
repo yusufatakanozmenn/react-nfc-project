@@ -1,8 +1,12 @@
 # Webonix Tap
 
-NFC kart yönetim paneli. Frontend React 19 + Vite 8 + React Router 7; backend Java 21 + Spring Boot 4.1.1 + Spring Security + JPA + MySQL. Backend katmanları Controller → Service → Repository şeklindedir.
+NFC kart yönetim paneli. Frontend React 19 + Vite 8 + React Router 7; güncel API `backend2/` içindeki PHP 8.2+ / CodeIgniter 4 / MySQL uygulamasıdır. PHP hostingde VDS veya Java gerektirmez.
 
-## Yerel çalıştırma
+**Güncel kurulum, hosting, güvenlik ve test adımları:** [PHP backend rehberi](backend2/README.md). Yerel React API varsayılanı `http://localhost:8081`, üretim varsayılanı `https://nfc-api.webonix.com.tr` adresidir.
+
+Aşağıdaki Java/JWT/Maven anlatımları `backend/` içindeki önceki uygulamaya aittir; PHP API rastgele sunucu oturumları ve MySQL'de ortak deneme sayaçları kullanır.
+
+## Java backend ile yerel çalıştırma (önceki uygulama)
 
 Frontend için Node.js 22+, backend için Java 21 ve mevcut MySQL veritabanı gerekir. Maven Wrapper backend içinde bulunur.
 
@@ -11,7 +15,7 @@ npm ci
 npm run dev
 ```
 
-Frontend varsayılan adresi `http://localhost:5173`, API adresi `http://localhost:8080` olur. API adresini değiştirmek için kökte `.env.example` dosyasını `.env` olarak kopyalayıp `VITE_API_URL` ayarlayın. `VITE_` değişkenleri tarayıcıya gönderilir; buraya sır koymayın.
+Frontend adresi `http://localhost:5173` olur. Java API için `VITE_API_URL=http://localhost:8080` ayarlayın. API adresini değiştirmek için kökte `.env.example` dosyasını `.env` olarak kopyalayıp `VITE_API_URL` ayarlayın. `VITE_` değişkenleri tarayıcıya gönderilir; buraya sır koymayın.
 
 Backend için `backend/.env.example` dosyasını `backend/.env` olarak kopyalayın; mevcut veritabanı kullanıcı bilgilerini ve güçlü, rastgele bir `JWT_SECRET` girin. Bu dosya zaten varsa üzerine yazmayın. JWT anahtarı en az 32 bayt olmalıdır; örneğin güvenilir bir parola yöneticisiyle üretilmiş 64 bayt rastgele değer kullanılabilir.
 
@@ -28,7 +32,7 @@ Backend `.env` dosyasını Java properties biçiminde otomatik okur; değerleri 
 
 - `src/auth/session.js` merkezi oturum kaynağıdır. Açılışta kimlik `/api/auth/me` üzerinden doğrulanır.
 - Giriş JWT'si yalnızca HttpOnly, SameSite=Strict cookie'de taşınır; API yanıtında veya LocalStorage'da bulunmaz. Eski LocalStorage kayıtları otomatik temizlenir. Bearer giriş yöntemi kapalıdır.
-- Oturum bir saat geçerlidir. JWT'nin SHA-256 özeti ve bitiş zamanı MySQL `auth_sessions` tablosunda tutulur; her istekte aktif oturum, kullanıcı ve güncel rol doğrulanır.
+- Normal oturum en fazla bir saat geçerlidir ve kalıcı cookie oluşturmaz. **Beni hatırla** seçilirse sunucu oturumu ve kalıcı cookie yedi gün geçerli olur. JWT'nin SHA-256 özeti ve bitiş zamanı MySQL `auth_sessions` tablosunda tutulur; her istekte aktif oturum, kullanıcı ve güncel rol doğrulanır.
 - Çıkış, sunucudaki oturumu iptal eder ve cookie'yi siler. Kopyalanmış eski cookie tekrar kullanılamaz. Ağ hatasında başarılı çıkış yapılmış gibi davranılmaz.
 - POST/PUT/PATCH/DELETE işlemleri, giriş/çıkış dahil CSRF doğrulaması ister. Frontend önce `/api/auth/csrf` çağırır, sonra `X-XSRF-TOKEN` başlığını gönderir; fetch `credentials: include` kullanır.
 - `401` mevcut oturumu kapatır; `403` kapatmaz. Eski yanıtlar yeni oturumu silemez. Sekmeler arasında yalnızca değişiklik bildirimi paylaşılır.
@@ -68,7 +72,7 @@ Admin menüsünde **Müşteriler** ekranını açın. Müşteri/işletme adı, e
 
 Müşteriyi **Kartları Yönet** ile seçip atanmamış bir kartı **Kartı Müşteriye Bağla** düğmesiyle bağlayın. **Bu Müşteri İçin Yeni Kart** bağlantısı yeni kart formunu o müşteri seçili olarak açar. Başka müşteriye atanmış kartın sahipliğini değiştirmek için mevcut kart düzenleme ekranını kullanın.
 
-Yeni müşteri şifresi en az 15 karakter ve BCrypt sınırı nedeniyle en fazla 72 UTF-8 baytı olabilir; kayıt sonrasında listelerde ve API yanıtlarında gösterilmez. Aynı e-posta tekrar kullanılamaz. Müşteri ekranı ve `/api/admin/customers` GET/POST endpointleri yalnızca ADMIN'e açıktır.
+Yeni müşteri şifresi en az 6 karakter ve BCrypt sınırı nedeniyle en fazla 72 UTF-8 baytı olabilir; kayıt sonrasında listelerde ve API yanıtlarında gösterilmez. Aynı e-posta tekrar kullanılamaz. Müşteri ekranı ve `/api/admin/customers` GET/POST endpointleri yalnızca ADMIN'e açıktır.
 
 ## Güvenlik ve yayınlama
 
@@ -87,3 +91,15 @@ python3 scripts/audit-java.py
 ```
 
 Java taraması OSV'ye yalnızca çözümlenmiş Maven paket adlarını/sürümlerini gönderir. Sıfır bulgu, gelecekte veya henüz bilinmeyen açık olmadığı garantisi değildir.
+
+## Beni hatırla ve şifre kurtarma
+
+Giriş ekranındaki **Beni hatırla**, parolayı tarayıcıya kaydetmeden HttpOnly cookie ile 7 günlük oturum açar. Seçilmezse oturumun sunucu sınırı 1 saattir ve cookie `Max-Age` içermez; tarayıcının oturum geri yükleme davranışına göre pencere kapanınca silinmesi değişebilir. Çıkış her iki oturumu da sunucudan iptal eder.
+
+**Şifremi unuttum** → e-posta adresi → gelen bağlantı → yeni şifre ve tekrarı → normal giriş. Bağlantı 15 dakika geçerli, tek kullanımlıktır; yeni istek önceki bağlantıyı geçersiz kılar. Yeni şifre mevcut tüm cihaz oturumlarını kapatır. Sıfırlama anahtarı veritabanında SHA-256 özetiyle tutulur, API yanıtlarında/loglarda gösterilmez. Anahtar URL fragment'inden alınıp adres çubuğundan temizlenir; sayfa yenilenirse e-postadaki bağlantıyı tekrar açmak gerekir.
+
+SMTP için backend ortamında `MAIL_ENABLED`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_SENDER_NAME` ve `FRONTEND_URL` kullanılır. Örnekler `backend/.env.example` içinde. Yerel Hostinger yapılandırması 587/STARTTLS ile ayarlandı; sertifika ve kimlik doğrulaması e-posta gönderilmeden kontrol edildi. Parola yalnızca Git dışındaki `backend/.env` içindedir. TLS zorunlu, sunucu sertifikası doğrulaması açık, bağlantı/okuma/yazma zaman aşımı 5 saniyedir.
+
+`FRONTEND_URL` şu an `http://localhost:5173`; canlıya çıkışta gerçek HTTPS panel origin'i olmalıdır (sonunda `/` olmadan). Mail göndericisi, sıfırlama bağlantısını HTTP Host başlığından üretmez. SMTP kapalıysa form `503` ile açık bir hizmet hatası gösterir. Gönderim kuyrukta yürür; bilinen/bilinmeyen hesaplar aynı `202` yanıtını alır. SMTP hataları sır içermeyen bir uyarıyla backend loguna yazılır. Kuyruk ve hız sınırları tek uygulama belleğindedir; büyük ölçek için kalıcı iş kuyruğu gerekir.
+
+Mevcut şemaya `backend/migrations/003_password_resets.sql` bir migration hesabıyla uygulanmalıdır; yerel MySQL'e uygulandı. Otomatik testler canlı kişilere e-posta göndermez veya mevcut hesapların şifrelerini değiştirmez.

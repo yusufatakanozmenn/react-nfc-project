@@ -5,7 +5,7 @@ import org.springframework.web.server.ResponseStatusException;
 public final class PasswordPolicy {
     private PasswordPolicy() {}
     public static void validate(String password) {
-        if (password == null || password.isBlank() || password.length() < 15 || password.getBytes(StandardCharsets.UTF_8).length > 72)
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Şifre en az 15 karakter ve en fazla 72 bayt olmalıdır.");
+        if (password == null || password.isBlank() || password.length() < 6 || password.getBytes(StandardCharsets.UTF_8).length > 72)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Şifre en az 6 karakter ve en fazla 72 bayt olmalıdır.");
     }
 }

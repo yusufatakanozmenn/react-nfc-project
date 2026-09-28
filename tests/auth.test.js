@@ -1,7 +1,7 @@
 import { test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { apiFetch } from "../src/services/api.js";
-import { getSession, login, logout, restoreSession, initializeAuth, updateProfile } from "../src/auth/session.js";
+import { getSession, login, logout, restoreSession, initializeAuth, updateProfile, changePassword } from "../src/auth/session.js";
 
 const storage = new Map();
 Object.defineProperty(globalThis, "localStorage", { value: {
@@ -183,4 +183,63 @@ test("only ADMIN opens dashboard and USER starts at cards", async () => {
   const { isAdmin, homePath } = await import("../src/auth/permissions.js");
   assert.equal(homePath({ role: "ADMIN" }), "/"); assert.equal(homePath(user), "/cards");
   assert.equal(isAdmin(user), false); assert.equal(isAdmin(null), false);
+});
+
+test("rememberMe choice is passed explicitly without storing the password", async () => {
+  for (const rememberMe of [false, true]) {
+    let posted;
+    mock(async (url, options) => { if (url.endsWith('/login')) posted = JSON.parse(options.body); return json(user); });
+    await login({ email: user.email, password: 'temporary-test-only', rememberMe });
+    assert.equal(posted.rememberMe, rememberMe);
+    assert.equal(storage.has('password'), false);
+    assert.equal(storage.has('token'), false);
+  }
+});
+
+test("successful password recovery clears the shared identity and notifies other tabs", async () => {
+  const { invalidateSession } = await import('../src/auth/session.js');
+  await successfulLogin();
+  const previousEvent = storage.get('auth:event');
+  invalidateSession();
+  assert.equal(getSession().status, 'guest');
+  assert.equal(getSession().user, null);
+  assert.notEqual(storage.get('auth:event'), previousEvent);
+});
+
+
+test("settings password change sends protected PUT and clears identity after success", async () => {
+  await successfulLogin();
+  const body = { currentPassword: "test-only", newPassword: "new-test-only", confirmPassword: "new-test-only" };
+  const previousEvent = storage.get("auth:event");
+  mock(async (url, options) => {
+    assert.ok(url.endsWith("/api/auth/me/password"));
+    assert.equal(options.method, "PUT"); assert.deepEqual(JSON.parse(options.body), body);
+    assert.equal(options.headers.get("X-XSRF-TOKEN"), "csrf-test-only");
+    return noContent();
+  });
+  await changePassword(body);
+  assert.equal(getSession().status, "guest"); assert.equal(getSession().user, null);
+  assert.notEqual(storage.get("auth:event"), previousEvent);
+  assert.equal(storage.has("password"), false);
+});
+test("failed settings password change preserves the current session", async () => {
+  await successfulLogin();
+  mock(async () => json({ message: "Mevcut şifre hatalı." }, 400));
+  await assert.rejects(changePassword({}), /Mevcut şifre hatalı/);
+  assert.deepEqual(getSession().user, user);
+  mock(async () => { throw new Error("offline"); });
+  await assert.rejects(changePassword({}), /offline/);
+  assert.equal(getSession().status, "authenticated");
+});
+test("a queued newer login survives a pending password change", async () => {
+  await successfulLogin(); const pending = deferred(); const calls = [];
+  mock(async (url) => {
+    calls.push(url.split("/").at(-1));
+    return url.endsWith("/password") ? pending.promise : json(user);
+  });
+  const changing = changePassword({}); await tick();
+  const signingIn = login({}); pending.resolve(noContent());
+  await changing; await signingIn;
+  assert.deepEqual(calls, ["password", "login", "me"]);
+  assert.equal(getSession().status, "authenticated");
 });

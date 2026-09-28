@@ -4,10 +4,10 @@ Bu çalışma uygulamayı güçlendirir; kapsamlı bağımsız sızma testi veya
 
 ## Uygulanan korumalar
 
-- Açık kayıt kapatıldı. Müşteri oluşturma yalnızca ADMIN'e açık; yeni hesap daima USER. Yeni şifrelerde en az 15 karakter ve BCrypt nedeniyle en fazla 72 UTF-8 bayt kuralı var. Mevcut kullanıcı şifreleri değiştirilmedi.
+- Açık kayıt kapatıldı. Müşteri oluşturma yalnızca ADMIN'e açık; yeni hesap daima USER. Yeni şifrelerde en az 6 karakter ve BCrypt nedeniyle en fazla 72 UTF-8 bayt kuralı var. Mevcut kullanıcı şifreleri değiştirilmedi.
 - Hesap başına 10, IP başına 30 giriş denemesi / 15 dakika. Başarılı denemeler de sayılır. Sayaçlar eşzamanlı isteklerde atomiktir, hafıza kullanımı sınırlıdır; kapasite dolduğunda yeni girişleri geçici reddeder. Forwarded başlıkları geliştirmede kabul edilmez. Üretimde sadece loopback proxy güvenilirdir ve Nginx gelen başlığı gerçek istemci IP'siyle değiştirir.
 - Bilinmeyen e-posta, yanlış parola ve pasif hesap aynı giriş hatasını alır. Bilinmeyen kullanıcıda da BCrypt kontrolü yapılır. Aşırı uzun parolalar BCrypt'e ulaşmadan reddedilir.
-- JWT süresi 24 saatten 1 saate indirildi; her oturum benzersiz kimlik taşır. Token yalnızca HttpOnly / SameSite=Strict cookie'de bulunur. Üretimde Secure ve `__Host-` öneki kullanılır. Token ve kullanıcı bilgisi LocalStorage'a yazılmaz; eski kayıtlar temizlenir. API gövdesinde token dönmez; Bearer yolu kaldırıldı.
+- JWT normal oturumda 1 saat; kullanıcı Beni hatırla seçerse 7 gün geçerlidir; her oturum benzersiz kimlik taşır. Token yalnızca HttpOnly / SameSite=Strict cookie'de bulunur. Üretimde Secure ve `__Host-` öneki kullanılır. Token ve kullanıcı bilgisi LocalStorage'a yazılmaz; eski kayıtlar temizlenir. API gövdesinde token dönmez; Bearer yolu kaldırıldı.
 - MySQL `auth_sessions` tablosunda tokenın SHA-256 özeti, kullanıcı ID'si ve bitiş zamanı tutulur. İmza/son kullanma/oturum kaydı/aktif kullanıcı ve güncel rol her istekte kontrol edilir. Çıkış kaydı siler; yeniden giriş mevcut cookie'nin oturumunu iptal eder. Süresi dolmuş oturum kayıtları yeni girişlerde temizlenir.
 - Giriş ve çıkış dahil tüm yazma işlemleri Spring Security CSRF kontrolü kullanır. CSRF cookie'si HttpOnly'dir; frontend tokenı `/api/auth/csrf` gövdesinden alır. Varsayılan XOR/BREACH koruması korunmuştur. CORS yalnızca açıkça tanımlanan origin'lere ve gereken başlıklara izin verir.
 - Varsayılan erişim reddedilir. Kart ve istatistik kapsamı backend'de sahipliğe göre belirlenir. Kartın kodunu/sahibini normal düzenleme isteğiyle değiştirmek veya profil üzerinden ADMIN olmak engellenir.
@@ -44,7 +44,19 @@ Tarayıcı: ayrı bellek içi test API'siyle USER ve ADMIN girişi, cookie oturu
 1. Gerçek alan adı, TLS sertifikası, Nginx yapılandırması ve güvenlik duvarını kurup dış ağdan kontrol edin. Örnek yapılandırma hazırlanmıştır; canlı TLS kurulumu yapılmamıştır. MySQL'i internetten erişilebilir yapmayın. Uzak DB bağlantısında sertifika doğrulamalı TLS kullanın.
 2. `SPRING_PROFILES_ACTIVE=production` ve güçlü, ayrı üretim sırları kullanın. Bu profil Secure cookie, HTTPS CORS, `validate` şema ve root olmayan DB hesabını zorunlu kılar. HTTPS panelden aynı origin `/api/` önerilir. Yerel `.env` dosyalarını sunucuya veya frontend bundle'a taşımayın.
 3. Giriş sayaçları şu an tek JVM belleğindedir. Yatay ölçeklemeden önce merkezi Redis/DB tabanlı ortak sayaç ve edge/WAF hız sınırlaması gerekir. Nginx örneği ayrıca IP başına giriş limiti içerir.
-4. Yönetici MFA, parola değiştirme/sıfırlama, oturumları listeleyip tümünden çıkış ve güvenlik olaylarına alarm eklenmedi. Bunlar sonraki güvenlik geliştirmeleridir. Mevcut kısa kullanıcı parolaları otomatik değiştirilmedi.
+4. Yönetici MFA, ayarlardan parola değiştirme, oturumları listeleyip tümünden çıkış ve güvenlik olaylarına alarm eklenmedi. Bunlar sonraki güvenlik geliştirmeleridir. Mevcut kısa kullanıcı parolaları otomatik değiştirilmedi.
 5. Yedekleme/geri yükleme, işletim sistemi/JDK/MySQL yama politikası, izleme ve bağımsız sızma testi canlıya çıkışın parçası olmalıdır. Bu makinedeki Java 21.0.1 çalışma zamanı uygulama bağımlılık taramasının dışındadır; güncel desteklenen Java 21 yamasına geçiş gerekir.
 
 CSRF uygulaması için [Spring Security resmi kılavuzu](https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html) esas alınmıştır.
+
+## Sonraki ekleme: hatırlanan oturum ve şifre kurtarma
+
+- `LoginRequest.rememberMe` varsayılan olarak false. Normal cookie oturumluk, JWT 1 saat; hatırlanan cookie ve JWT 7 gün. Parola LocalStorage'a veya cookie'ye konmaz. Bu seçim yalnızca yeni girişte geçerlidir.
+- `/forgot-password` ve `/reset-password` bağımsız sayfaları eklendi. Her iki POST endpointi de CSRF korumalıdır. İstek oluşturma 15 dakikada hesap başına 3 / IP başına 20; tamamlama IP başına 10 denemeyle sınırlıdır.
+- 256 bit rastgele, 15 dakikalık token: DB'de yalnızca SHA-256 özeti; kullanıcı başına tek bekleyen kayıt. Geçersiz/eski/kullanılmış/pasif veya e-postası değişmiş hesapların bağlantıları reddedilir. Token API'de veya logda dönmez. Link yalnızca yapılandırılan frontend origin'ini kullanır; fragment anahtarı sunucu access loguna/referrer'a göndermez.
+- Sıfırlama, kullanıcı satırını kilitleyip tokenı koşullu olarak tüketir; yeni BCrypt parolası ve tüm oturumların iptali aynı transaction içindedir. Login ve profil güncellemesi aynı kullanıcı kilidini kullanır; eski parola hash'i yarış koşuluyla geri yazılamaz. Otomatik giriş yapılmaz.
+- Hostinger SMTP 587/STARTTLS, zorunlu TLS ve sertifika doğrulaması ile yapılandırıldı. Bağlantı ve kimlik doğrulaması gerçek SMTP'de doğrulandı; gerçek kişiye test e-postası gönderilmedi. Hesap varlığına göre zaman farkını azaltmak için gönderim sınırlı iş kuyruğunda yapılır. SMTP başarısızsa yeni token kaydı geri alınır.
+- Yeni testler: cookie/JWT süreleri, rememberMe'nin varsayılanı, e-posta içeriği ve UTF-8 gönderen kimliği, tek kullanım, süre sonu, link yenileme, aynı tokenla eşzamanlı istek, parola ilkeleri, tüm oturumların iptali, eski/yeni parolayla giriş, CSRF, bilinmeyen/pasif hesap, e-posta değişikliği, rate limit, SMTP kapalı/hata durumları. Toplam 69 backend ve 23 frontend testi. Lint/build başarılı.
+- Tarayıcıda ayrı bellek içi test API'siyle checkbox, login/logout, kurtarma formunun yanıtı, tokenlı linkin formu açması ve adres çubuğundan temizlenmesi doğrulandı. Yeni şifreyi kaydetme uçtan uca davranışı H2/MockMvc testinde çalıştırıldı; gerçek kullanıcıların şifreleri değişmedi.
+
+Tasarım referansı: [OWASP şifre kurtarma kılavuzu](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html), [Spring Boot e-posta yapılandırması](https://docs.spring.io/spring-boot/reference/io/email.html).

@@ -200,15 +200,16 @@ class OwnershipAndProfileTests extends SecurityTestSupport {
     }
 
     @Test void adminCreatesUserWithHashedPasswordAndNoCredentialResponse() throws Exception {
-        var body = customerBody(); body.put("role", "ADMIN"); body.put("active", false); body.put("id", 1);
+        String sixCharacters = UUID.randomUUID().toString().substring(0, 6);
+        var body = customerBody(); body.put("password", sixCharacters); body.put("role", "ADMIN"); body.put("active", false); body.put("id", 1);
         createCustomerAs(3, body).andExpect(status().isCreated()).andExpect(jsonPath("$.id").value(4))
                 .andExpect(jsonPath("$.name").value("Yeni Müşteri")).andExpect(jsonPath("$.email").value("customer@example.test"))
                 .andExpect(jsonPath("$.active").value(true)).andExpect(jsonPath("$.password").doesNotExist())
                 .andExpect(jsonPath("$.token").doesNotExist());
         var created = users.findById(4L).orElseThrow();
         org.junit.jupiter.api.Assertions.assertEquals("USER", created.getRole());
-        org.junit.jupiter.api.Assertions.assertTrue(encoder.matches(PASSWORD, created.getPassword()));
-        org.junit.jupiter.api.Assertions.assertNotEquals(PASSWORD, created.getPassword());
+        org.junit.jupiter.api.Assertions.assertTrue(encoder.matches(sixCharacters, created.getPassword()));
+        org.junit.jupiter.api.Assertions.assertNotEquals(sixCharacters, created.getPassword());
         getAs("/api/auth/me", 3).andExpect(status().isOk()).andExpect(jsonPath("$.role").value("ADMIN"));
     }
 

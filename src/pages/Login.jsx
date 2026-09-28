@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
 
 import { successToast, errorToast } from "../utils/toast";
 
@@ -13,16 +13,17 @@ function Login() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    rememberMe: false,
   });
 
   const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
-    const { name, value } = event.target;
+    const { name, value, type, checked } = event.target;
 
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -104,14 +105,16 @@ function Login() {
 
             <div className="auth-options">
               <label className="remember-me">
-                <input type="checkbox" />
+                <input type="checkbox" name="rememberMe" checked={formData.rememberMe} onChange={handleChange} />
                 <span>Beni hatırla</span>
               </label>
 
-              <button type="button" className="forgot-password">
+              <Link to="/forgot-password" className="forgot-password">
                 Şifremi unuttum
-              </button>
+              </Link>
             </div>
+
+            {formData.rememberMe && <p className="auth-help">Bu cihazda 7 gün boyunca oturumunuz açık kalır. Ortak cihazlarda seçmeyin.</p>}
 
             <button type="submit" className="auth-submit" disabled={loading}>
               {loading ? "Giriş yapılıyor..." : "Giriş Yap"}

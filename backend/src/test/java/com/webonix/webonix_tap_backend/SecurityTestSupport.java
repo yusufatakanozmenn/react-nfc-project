@@ -21,9 +21,12 @@ abstract class SecurityTestSupport {
     @Autowired MockMvc securityMvc;
     @Autowired ObjectMapper securityMapper;
     @Autowired SessionService sessions;
+    @Autowired com.webonix.webonix_tap_backend.repository.AppUserRepository securityUsers;
     @MockitoBean AuthSessionRepository sessionRepository;
     @MockitoBean LoginRateLimiter limiter;
     @BeforeEach void sessionStore() {
+        when(securityUsers.findByIdForUpdate(anyLong())).thenAnswer(call -> securityUsers.findById(call.getArgument(0)));
+        when(securityUsers.findByEmailForUpdate(anyString())).thenAnswer(call -> securityUsers.findByEmail(call.getArgument(0)));
         var store = new ConcurrentHashMap<String, AuthSession>();
         when(sessionRepository.save(any())).thenAnswer(call -> {
             AuthSession session = call.getArgument(0); store.put(session.getId(), session); return session;

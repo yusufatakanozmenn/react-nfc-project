@@ -1,0 +1,2 @@
+# Never serve application code, .env, vendor, logs or database exports.
+Require all denied

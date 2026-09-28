@@ -43,12 +43,12 @@ class SecurityHardeningTests {
     }
     @Test void productionCookiesUseHostPrefixSecureHttpOnlyAndStrict() {
         var cookies = new AuthCookies(true); var response = new MockHttpServletResponse();
-        cookies.write(response, "test-only");
+        cookies.write(response, "test-only", true);
         String header = response.getHeader("Set-Cookie");
         assertTrue(header.startsWith("__Host-webonix_session="));
         assertTrue(header.contains("Secure")); assertTrue(header.contains("HttpOnly"));
         assertTrue(header.contains("SameSite=Strict")); assertFalse(header.contains("Domain="));
-        assertTrue(header.contains("Max-Age=3600"));
+        assertTrue(header.contains("Max-Age=604800"));
     }
     MockEnvironment production() {
         return new MockEnvironment().withProperty("app.cookies.secure", "true")

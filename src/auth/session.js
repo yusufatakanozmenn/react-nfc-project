@@ -31,6 +31,7 @@ const unauthorized = () => {
   nextRevision(); clearLegacyStorage(); publish("guest");
 };
 setUnauthorizedHandler(unauthorized);
+export const invalidateSession = () => { unauthorized(); notifyTabs(); };
 
 const currentUser = async () => {
   const response = await apiFetch("/api/auth/me", { auth: false });
@@ -100,4 +101,13 @@ export const updateProfile = async (profile) => {
   const data = await apiJson("/api/auth/me", { method: "PUT", body: JSON.stringify(profile) });
   if (attempt !== revision) throw new Error("Oturum değişti. Lütfen tekrar giriş yapın.");
   publish("authenticated", data); notifyTabs(); return data;
+};
+
+export const changePassword = (passwords) => {
+  const attempt = revision;
+  return enqueue(async () => {
+    if (state.status !== "authenticated" || attempt !== revision) throw new Error("Lütfen tekrar giriş yapın.");
+    await apiJson("/api/auth/me/password", { method: "PUT", body: JSON.stringify(passwords) });
+    if (attempt === revision) invalidateSession();
+  });
 };

@@ -93,7 +93,9 @@ public class AuthService {
 
     @org.springframework.transaction.annotation.Transactional
     public CurrentUserResponse updateProfile(String userId, com.webonix.webonix_tap_backend.dto.UpdateProfileRequest request) {
-        AppUser user = requireActiveUser(userId);
+        AppUser user = appUserRepository.findByIdForUpdate(Long.valueOf(userId))
+                .filter(candidate -> Boolean.TRUE.equals(candidate.getActive()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         String name = request.name() == null ? "" : request.name().trim();
         String updatedEmail = request.email() == null ? "" : request.email().trim().toLowerCase(Locale.ROOT);
         if (name.isEmpty() || name.length() > 100 || updatedEmail.length() > 150

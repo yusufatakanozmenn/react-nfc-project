@@ -2,6 +2,8 @@ package com.webonix.webonix_tap_backend.controller;
 import com.webonix.webonix_tap_backend.service.*;
 import com.webonix.webonix_tap_backend.security.LoginRateLimiter;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import com.webonix.webonix_tap_backend.security.AuthCookies;
 import jakarta.annotation.PreDestroy;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
@@ -13,11 +15,12 @@ import java.util.concurrent.*;
 public class PasswordResetController {
     private final PasswordResetService service;
     private final PasswordResetMailer mailer;
+    private final AuthCookies cookies;
     private final LoginRateLimiter requests = new LoginRateLimiter(Clock.systemUTC(),3,20);
     private final LoginRateLimiter completions = new LoginRateLimiter();
     private final ExecutorService executor = new ThreadPoolExecutor(1,2,60,TimeUnit.SECONDS,new ArrayBlockingQueue<>(50),
             task -> { Thread thread=new Thread(task,"password-reset-mail"); thread.setDaemon(true); return thread; });
-    public PasswordResetController(PasswordResetService service, PasswordResetMailer mailer) { this.service=service; this.mailer=mailer; }
+    public PasswordResetController(PasswordResetService service, PasswordResetMailer mailer, AuthCookies cookies) { this.service=service; this.mailer=mailer; this.cookies=cookies; }
     public record ForgotRequest(String email) {}
     public record ResetRequest(String token, String password) {}
     @PostMapping("/forgot-password")
@@ -37,10 +40,11 @@ public class PasswordResetController {
         return ResponseEntity.accepted().body(Map.of("message","Bu e-posta ile kayıtlı aktif bir hesabınız varsa sıfırlama bağlantısı gönderilecektir. Gelen kutunuzu ve spam klasörünü kontrol edin."));
     }
     @PostMapping("/reset-password")
-    public ResponseEntity<?> reset(@RequestBody ResetRequest body, HttpServletRequest request) {
+    public ResponseEntity<?> reset(@RequestBody ResetRequest body, HttpServletRequest request, HttpServletResponse response) {
         long wait=completions.retryAfter(request.getRemoteAddr(),request.getRemoteAddr());
         if(wait>0) return limited(wait);
         service.reset(body.token(),body.password());
+        cookies.write(response,null);
         return ResponseEntity.ok(Map.of("message","Şifreniz yenilendi. Tüm oturumlar kapatıldı; yeni şifrenizle giriş yapabilirsiniz."));
     }
     private ResponseEntity<?> limited(long seconds) {

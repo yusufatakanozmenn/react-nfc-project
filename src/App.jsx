@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { initializeAuth } from "./auth/session";
 import { Routes, Route, Navigate } from "react-router-dom";
 
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Login from "./pages/Login";
 import Customers from "./pages/Customers";
 import Dashboard from "./pages/Dashboard";
@@ -22,6 +24,8 @@ function App() {
     <Routes>
       {/* Herkese açık, bağımsız login ekranı */}
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Bütün yönetim sayfaları korumalı */}
       <Route element={<ProtectedLayout />}>

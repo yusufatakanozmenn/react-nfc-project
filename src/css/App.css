@@ -714,3 +714,16 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .customer-assign-form { margin-top: 24px; }
 .customer-new-card { display: inline-block; margin-top: 16px; }
 @media (max-width: 1100px) { .customer-grid { grid-template-columns: 1fr; } .customer-create { max-width: none; } }
+
+.auth-help { color: #64748b; font-size: 13px; line-height: 1.5; margin: 0 0 18px; }
+.auth-error, .auth-message { padding: 14px 16px; border-radius: 10px; line-height: 1.6; font-size: 14px; margin: 0 0 20px; overflow-wrap: anywhere; }
+.auth-error { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; }
+.auth-message { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+.auth-error a { color: inherit; text-decoration: underline; }
+.auth-recovery-back { margin-top: 22px; text-align: center; }
+.auth-recovery-back a { color: #475569; font-size: 14px; text-decoration: underline; }
+.forgot-password { text-decoration: none; }
+
+.settings-password-section { margin-top: 24px; }
+.settings-password-section h2 { margin: 0 0 12px; font-size: 20px; }
+.settings-password-section > .field-hint { margin: 0 0 24px; line-height: 1.6; }
