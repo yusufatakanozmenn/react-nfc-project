@@ -66,6 +66,7 @@ abstract class BaseApiController extends ResourceController
                 if ($result->getStatusCode() >= 400) $this->db->transRollback();
                 elseif (!$this->db->transCommit()) throw new ApiException('İşlem kaydedilemedi.', 503);
                 $transaction = false;
+                if ($result->getStatusCode() < 400) $result = $this->afterCommit($result);
             }
             return $result;
         } catch (ApiException $error) {
@@ -78,6 +79,11 @@ abstract class BaseApiController extends ResourceController
             if ((int) $error->getCode() === 1062) return $this->json(['message' => 'Bu kayıt zaten kullanılıyor.'], 409);
             return $this->json(['message' => 'İşlem gerçekleştirilemedi. Lütfen tekrar deneyin.'], 500);
         }
+    }
+
+    protected function afterCommit(ResponseInterface $result): ResponseInterface
+    {
+        return $result;
     }
 
     protected function data(): array

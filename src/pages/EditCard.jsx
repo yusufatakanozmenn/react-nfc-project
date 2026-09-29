@@ -1,3 +1,4 @@
+import DestinationField from "../components/DestinationField";
 import OwnerSelect from "../components/OwnerSelect";
 import { useAuth } from "../auth/useAuth";
 import { isAdmin } from "../auth/permissions";
@@ -64,6 +65,7 @@ function EditCard() {
     setFormData((currentData) => ({
       ...currentData,
       [name]: value,
+      ...(name === "type" ? { destinationUrl: "" } : {}),
     }));
   };
 
@@ -149,18 +151,8 @@ function EditCard() {
             </select>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="destinationUrl">Hedef URL</label>
-
-            <input
-              id="destinationUrl"
-              type="url"
-              name="destinationUrl"
-              value={formData.destinationUrl}
-              onChange={handleChange}
-              required
-            />
-          </div>
+          <DestinationField key={formData.type} type={formData.type} value={formData.destinationUrl}
+            onChange={destinationUrl => setFormData(current => ({ ...current, destinationUrl }))} />
 
           <button type="submit" className="primary-button">
             Değişiklikleri Kaydet

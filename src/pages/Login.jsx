@@ -1,3 +1,4 @@
+import Brand from "../components/Brand";
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 
@@ -54,14 +55,7 @@ function Login() {
       </div>
 
       <div className="auth-container">
-        <div className="auth-brand">
-          <div className="auth-logo">W</div>
-
-          <div>
-            <h1>Webonix Tap</h1>
-            <span>NFC Management Platform</span>
-          </div>
-        </div>
+        <div className="auth-brand"><Brand light /></div>
 
         <div className="auth-card">
           <div className="auth-card-header">

@@ -18,12 +18,12 @@ function Sidebar() {
   const admin = isAdmin(user);
   return (
     <aside className="sidebar">
-      <nav>
+      <nav aria-label="Ana menü">
         <ul>
-          {admin && <li><NavLink to="/" end>Dashboard</NavLink></li>}
+          {admin && <li><NavLink to="/" end>Genel Bakış</NavLink></li>}
 
           <li>
-            <NavLink to="/cards">{admin ? "Tüm Kartlar" : "Kartlarım"}</NavLink>
+            <NavLink to="/cards" end>{admin ? "Tüm Kartlar" : "Kartlarım"}</NavLink>
           </li>
 
           {admin && <li><NavLink to="/customers">Müşteriler</NavLink></li>}

@@ -1,3 +1,5 @@
+import Modal from "../components/Modal";
+import { deleteCustomer } from "../services/customers";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiJson } from "../services/api";
@@ -6,6 +8,10 @@ import { successToast } from "../utils/toast";
 const emptyForm = { name: "", email: "", password: "", confirmPassword: "" };
 
 export default function Customers() {
+  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
   const [customers, setCustomers] = useState([]);
   const [cards, setCards] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -62,11 +68,16 @@ export default function Customers() {
       if (!mounted.current) return;
       setCustomers((current) => [...current, customer].sort((a, b) => a.name.localeCompare(b.name, "tr")));
       setSelectedId(customer.id); setCardId(""); setAssignError(""); setForm(emptyForm);
+      successToast(customer.welcomeEmailStatus === "sent"
+        ? "Müşteri oluşturuldu ve hoş geldiniz e-postası gönderildi."
+        : "Müşteri oluşturuldu. Şimdi kart bağlayabilirsiniz.");
+      if (["failed", "disabled"].includes(customer.welcomeEmailStatus)) {
+        setFormError("Müşteri kaydı tamamlandı ancak hoş geldiniz e-postası gönderilemedi. Müşteriyi yeniden oluşturmayın; SMTP ayarlarını kontrol edin.");
+      }
     } catch (error) {
       if (mounted.current) setFormError(error.message);
       return;
     } finally { if (mounted.current) setSaving(false); }
-    successToast("Müşteri oluşturuldu. Şimdi kart bağlayabilirsiniz.");
   };
 
   const assignCard = async (event) => {
@@ -85,6 +96,22 @@ export default function Customers() {
       return;
     } finally { if (mounted.current) setAssigning(false); }
     successToast("Kart müşteriye bağlandı.");
+  };
+
+  const filteredCustomers = customers.filter(customer => `${customer.name} ${customer.email}`.toLocaleLowerCase("tr").includes(search.trim().toLocaleLowerCase("tr")));
+  const targetCards = cards.filter(card => card.ownerId === deleteTarget?.id);
+  const removeCustomer = async () => {
+    if (!deleteTarget || deleting || targetCards.length) return;
+    setDeleting(true); setDeleteError("");
+    try {
+      await deleteCustomer(deleteTarget.id);
+      if (!mounted.current) return;
+      setCustomers(current => current.filter(customer => customer.id !== deleteTarget.id));
+      if (selectedId === deleteTarget.id) setSelectedId(null);
+      setDeleteTarget(null);
+      successToast("Müşteri silindi.");
+    } catch (error) { if (mounted.current) setDeleteError(error.message); }
+    finally { if (mounted.current) setDeleting(false); }
   };
 
   return <>
@@ -116,16 +143,17 @@ export default function Customers() {
         </form>
       </section>
       <section className="customer-list" aria-labelledby="customer-list-title">
-        <h2 id="customer-list-title">Kayıtlı Müşteriler</h2>
+        <div className="section-heading"><h2 id="customer-list-title">Kayıtlı Müşteriler <span className="count-badge">{customers.length}</span></h2></div>
+        <label className="search-field">Müşteri ara<input type="search" placeholder="İsim veya e-posta…" value={search} onChange={event => setSearch(event.target.value)} /></label>
         <div className="table-container"><table className="cards-table">
           <thead><tr><th>Müşteri</th><th>E-posta</th><th>Kart</th><th>Durum</th><th>İşlem</th></tr></thead>
-          <tbody>{customers.map((customer) => <tr key={customer.id} className={selectedId === customer.id ? "selected-customer" : ""}>
+          <tbody>{filteredCustomers.map((customer) => <tr key={customer.id} className={selectedId === customer.id ? "selected-customer" : ""}>
             <td>{customer.name}</td><td>{customer.email}</td><td>{cards.filter((card) => card.ownerId === customer.id).length}</td>
             <td><span className={customer.active ? "status active-status" : "status passive-status"}>{customer.active ? "Aktif" : "Pasif"}</span></td>
             <td><button type="button" className="edit-button" disabled={assigning || saving} aria-pressed={selectedId === customer.id}
-              onClick={() => { setSelectedId(customer.id); setCardId(""); setAssignError(""); }}>Kartları Yönet</button></td>
+              onClick={() => { setSelectedId(customer.id); setCardId(""); setAssignError(""); }}>Kartları Yönet</button> <button type="button" className="delete-button" aria-label={`${customer.name} müşterisini sil`} disabled={assigning || saving || deleting || loading || Boolean(loadError)} onClick={() => { setDeleteTarget(customer); setDeleteError(""); }}>Sil</button></td>
           </tr>)}
-          {!loading && !loadError && customers.length === 0 && <tr><td colSpan={5}>Henüz müşteri eklenmedi.</td></tr>}
+          {!loading && !loadError && filteredCustomers.length === 0 && <tr><td colSpan={5}>{customers.length ? "Aramanızla eşleşen müşteri yok." : "Henüz müşteri eklenmedi."}</td></tr>}
           </tbody>
         </table></div>
         {selected && <section className="form-container customer-cards" aria-labelledby="customer-cards-title">
@@ -150,5 +178,11 @@ export default function Customers() {
         </section>}
       </section>
     </div>
+    {deleteTarget && <Modal title="Müşteriyi sil" onClose={() => setDeleteTarget(null)} busy={deleting}>
+      <p><strong>{deleteTarget.name}</strong> ({deleteTarget.email}) hesabını silmek istiyor musunuz?</p>
+      {targetCards.length ? <p className="notice-warning">Bu müşteriye bağlı {targetCards.length} kart var. Önce kartları başka bir müşteriye atayın veya kart düzenleme ekranından sahip atamasını kaldırın.</p> : <p className="field-hint">Bu işlem geri alınamaz. Müşteri artık hesabına giriş yapamaz.</p>}
+      {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+      <div className="modal-actions"><button className="edit-button" onClick={() => setDeleteTarget(null)} disabled={deleting}>Vazgeç</button><button className="delete-button" onClick={removeCustomer} disabled={deleting || targetCards.length > 0}>{deleting ? "Siliniyor…" : "Müşteriyi sil"}</button></div>
+    </Modal>}
   </>;
 }

@@ -727,3 +727,105 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 .settings-password-section { margin-top: 24px; }
 .settings-password-section h2 { margin: 0 0 12px; font-size: 20px; }
 .settings-password-section > .field-hint { margin: 0 0 24px; line-height: 1.6; }
+
+/* Webonix Tap identity and accessible interaction surfaces. */
+body { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+button, input, select { font: inherit; }
+a, button { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid #0b9b84; outline-offset: 3px; }
+.brand { display: inline-flex; align-items: center; gap: 11px; text-align: left; }
+.brand-link { text-decoration: none; }
+.brand .brand-wordmark { color: #101e30; font-size: 22px; font-weight: 750; letter-spacing: -.6px; }
+.brand .brand-wordmark strong { color: #087d6b; }
+.brand small { display: block; margin-top: 3px; font-size: 11px; font-weight: 450; letter-spacing: .1px; color: #687789; }
+.brand-light .brand-wordmark { color: #fff; }
+.brand-light .brand-wordmark strong { color: #53ddc6; }
+.brand-light small { color: #adbecf; }
+.auth-brand .brand-wordmark { margin: 0; }
+.account-link { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.account-link small { display: block; margin-top: 4px; color: #798698; font-size: 11px; }
+.header .account-avatar { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #e4f6f1; color: #096b59; font-weight: 700; }
+.page-header { gap: 16px; }
+.page-header h1 { font-size: 28px; letter-spacing: -.7px; }
+.page-header p { margin-top: 8px; line-height: 1.5; }
+.sidebar nav { flex: 1; }
+.sidebar a.active { background: #144c48; color: #bdfff0; }
+.sidebar a { font-size: 14px; font-weight: 550; }
+.sidebar-logout { margin-top: 28px; }
+.primary-button, .auth-submit { background: #087d6b; font-weight: 600; }
+.primary-button:hover, .auth-submit:hover:not(:disabled) { background: #056252; }
+.auth-badge { color: #087d6b; background: #e5f7f1; }
+.auth-decoration-one { background: #148877; }
+.auth-decoration-two { background: #184766; }
+.forgot-password { color: #087d6b; }
+.share-button { border: 1px solid #b7e3d7; border-radius: 7px; background: #effbf6; color: #076451; padding: 8px 11px; cursor: pointer; font-weight: 600; }
+.share-button:hover { background: #dff4eb; }
+.action-buttons { flex-wrap: wrap; min-width: 240px; }
+.card-summary { display: flex; gap: 30px; flex-wrap: wrap; padding: 20px 24px; background: #fff; border: 1px solid #e5eaf0; border-radius: 12px; margin-bottom: 24px; }
+.card-summary span { color: #637185; font-size: 14px; }
+.card-summary strong { font-size: 24px; color: #15283d; margin-right: 6px; }
+.list-toolbar { display: flex; gap: 14px; align-items: end; margin-bottom: 20px; }
+.list-toolbar > label { flex: 1; }
+.list-toolbar > .search-field { flex: 2; }
+.list-toolbar label, .search-field { display: flex; flex-direction: column; gap: 8px; color: #526174; font-size: 13px; font-weight: 550; }
+.list-toolbar input, .list-toolbar select, .search-field input { width: 100%; min-width: 0; border: 1px solid #d6dfe7; border-radius: 8px; padding: 12px; background: white; color: #15283d; }
+.customer-list > .search-field { margin-bottom: 16px; }
+.count-badge { display: inline-block; background: #e7eee9; color: #16664f; padding: 4px 8px; border-radius: 6px; font-size: 12px; vertical-align: middle; }
+.cards-table { font-size: 13px; }
+.cards-table code { font-size: 12px; color: #546277; }
+.app-modal { border: 0; border-radius: 20px; padding: 28px; width: min(540px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); overflow-y: auto; margin: auto; box-shadow: 0 24px 80px #07111f40; color: #243347; }
+.app-modal::backdrop { background: #07111fab; backdrop-filter: blur(4px); }
+.app-modal p { line-height: 1.6; overflow-wrap: anywhere; }
+.modal-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; }
+.modal-heading h2 { margin: 0; font-size: 21px; letter-spacing: -.4px; }
+.icon-button { border: 0; background: #f0f3f6; border-radius: 50%; width: 36px; height: 36px; font-size: 24px; cursor: pointer; flex-shrink: 0; color: #405168; }
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+.modal-actions a, .modal-actions button { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; }
+.notice-warning { margin: 16px 0; padding: 12px 16px; border: 1px solid #f4d39a; background: #fff9ed; color: #7c4e0a; border-radius: 8px; font-size: 13px; }
+.share-card { display: flex; align-items: center; gap: 10px; padding: 14px; background: #f4f7f9; border-radius: 12px; }
+.share-card > span:first-of-type { flex: 1; font-size: 14px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.share-card small { display: block; font-size: 11px; color: #687789; margin-top: 4px; }
+.share-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.share-url { width: 100%; padding: 12px; border: 1px solid #ccd7df; border-radius: 8px; background: #f8fafb; font-size: 13px; }
+.nfc-instructions { margin: 24px 0; border-top: 1px solid #e6ebf0; padding-top: 20px; font-size: 13px; color: #59687b; line-height: 1.65; }
+.nfc-instructions h3 { color: #213349; font-size: 14px; margin-bottom: 10px; }
+.nfc-instructions ol { padding-left: 20px; margin-bottom: 12px; }
+@media(max-width: 900px) { .sidebar { width: 195px; } .panel-content { padding: 22px; } .list-toolbar { flex-wrap: wrap; } }
+@media(max-width: 700px) {
+  .header { height: 76px; padding: 12px 16px; gap: 10px; }
+  .brand .brand-wordmark { font-size: 18px; }
+  .brand small { font-size: 10px; }
+  .brand img { width: 38px; height: 38px; }
+  .account-link > span:last-child { display: none; }
+  .sidebar { width: 100%; min-height: auto; padding: 10px 12px; }
+  .sidebar nav ul { display: flex; gap: 6px; overflow-x: auto; }
+  .sidebar li { margin: 0; flex-shrink: 0; }
+  .sidebar a { padding: 11px 13px; font-size: 13px; }
+  .sidebar-logout { margin: 8px 0 0; padding: 8px 12px; width: fit-content; font-size: 12px; }
+  .panel-content { padding: 20px 14px; }
+  .page-header { align-items: flex-start; flex-wrap: wrap; }
+  .page-header h1 { font-size: 25px; }
+  .page-header p { font-size: 13px; }
+  .card-summary { gap: 14px 22px; padding: 16px; }
+  .card-summary strong { font-size: 21px; }
+  .list-toolbar > .search-field { flex-basis: 100%; }
+  .list-toolbar > label { min-width: 120px; }
+  .form-container { padding: 22px 18px; }
+  .responsive-cards thead { display: none; }
+  .responsive-cards, .responsive-cards tbody { display: block; }
+  .responsive-cards tr { display: block; border-bottom: 6px solid #f7f8fc; padding: 10px 6px; }
+  .responsive-cards td { display: flex; justify-content: space-between; align-items: start; gap: 14px; padding: 9px 12px; border: 0; max-width: none; overflow-wrap: anywhere; }
+  .responsive-cards td[data-label]::before { content: attr(data-label); flex: 0 0 65px; font-size: 11px; color: #798698; font-weight: 600; padding-top: 2px; }
+  .responsive-cards td.action-buttons { justify-content: flex-start; border-top: 1px solid #e8edf2; padding-top: 14px; margin-top: 8px; gap: 8px; }
+  .responsive-cards td.card-destination { word-break: break-word; }
+  .customer-card-list li { flex-wrap: wrap; }
+  .app-modal { padding: 22px 18px; }
+  .modal-actions > * { flex: 1; }
+}
+@media(prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.destination-input { display: flex; flex-wrap: wrap; border: 1px solid #ccd5df; border-radius: 10px; overflow: hidden; background: #f1f5f9; }
+.destination-prefix { padding: 13px 12px; color: #475569; font-size: 13px; overflow-wrap: anywhere; align-self: center; }
+.destination-input input { flex: 1 1 180px; min-width: 0; border: 0; border-radius: 0; background: white; }
+.destination-hint { color: #64748b; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+.destination-mode { border: 0; background: none; color: #176653; padding: 8px 0; font: inherit; font-size: 13px; cursor: pointer; text-decoration: underline; }

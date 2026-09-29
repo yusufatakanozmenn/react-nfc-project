@@ -92,6 +92,30 @@ try {
         $r=login('user@example.test','old-test-password',true);status($r,200);preg_match('/^Set-Cookie: webonix_session=.*Max-Age=(\d+)/mi',$r['headers'],$age);check(isset($age[1])&&(int)$age[1]>=604798&&(int)$age[1]<=604800,'Remember duration');
         check(scalar('SELECT id FROM auth_sessions ORDER BY expires_at DESC LIMIT 1')===hash('sha256',$r['cookies']['webonix_session']),'Stored session is hashed');
     });
+    scenario('customer deletion enforces admin, CSRF, ownership and session revocation',function(){
+        $admin=session('admin@example.test'); $user=session();
+        status(mutate('DELETE','/api/admin/customers/4'),401);
+        status(mutate('DELETE','/api/admin/customers/4',$user),403);
+        status(request('DELETE','/api/admin/customers/4',$admin),403);
+        status(mutate('DELETE','/api/admin/customers/1',$admin),403);
+        status(mutate('DELETE','/api/admin/customers/999',$admin),404);
+        status(mutate('DELETE','/api/admin/customers/0',$admin),404);
+        status(mutate('DELETE','/api/admin/customers/99999999999999999999999',$admin),404);
+        resetLink();
+        status(mutate('DELETE','/api/admin/customers/2',$admin),409);
+        check((int)scalar('SELECT COUNT(*) FROM app_users WHERE id=2')===1,'Owned customer remains');
+        check((int)scalar('SELECT COUNT(*) FROM password_resets WHERE user_id=2')===1,'Rejected deletion preserves reset');
+        status(request('GET','/api/auth/me',$user),200);
+        status(mutate('PUT','/api/cards/1/owner',$admin,['ownerId'=>null]),200);
+        status(mutate('DELETE','/api/admin/customers/2',$admin),204);
+        check((int)scalar('SELECT COUNT(*) FROM app_users WHERE id=2')===0,'Customer removed');
+        check((int)scalar('SELECT COUNT(*) FROM auth_sessions WHERE user_id=2')===0,'Sessions removed');
+        check((int)scalar('SELECT COUNT(*) FROM password_resets WHERE user_id=2')===0,'Recovery tokens removed');
+        check((int)scalar('SELECT COUNT(*) FROM nfc_cards')===3,'Cards preserved');
+        status(request('GET','/api/auth/me',$user),401);
+        status(mutate('DELETE','/api/admin/customers/2',$admin),404);
+        status(mutate('DELETE','/api/admin/customers/4',$admin),204);
+    });
     scenario('wrong password, inactive and unknown accounts',function(){foreach(['user@example.test','disabled@example.test','missing@example.test'] as $email)status(login($email,'wrong'),401);status(login('disabled@example.test'),401);});
     scenario('authentication, roles and hidden ownership',function(){
         status(request('GET','/api/cards'),401);$u=session();status(request('GET','/api/admin/customers',$u),403);status(request('GET','/api/admin/users',$u),403);

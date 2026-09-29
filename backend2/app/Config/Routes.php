@@ -26,6 +26,7 @@ $routes->delete('api/cards/(:num)', 'CardController::deleteCard/$1');
 $routes->get('api/admin/users', 'AdminUserController::users');
 $routes->get('api/admin/customers', 'AdminUserController::customers');
 $routes->post('api/admin/customers', 'AdminUserController::createCustomer');
+$routes->delete('api/admin/customers/(:num)', 'AdminUserController::deleteCustomer/$1');
 $routes->get('api/statistics', 'StatisticsController::index');
 
 // Public URL written to the NFC tag; inactive/unknown cards do not redirect.
